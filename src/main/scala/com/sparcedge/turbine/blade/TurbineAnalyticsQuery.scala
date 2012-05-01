@@ -1,16 +1,13 @@
 package com.sparcedge.turbine.blade
 
-import org.scala_tools.time.Imports._
-import org.joda.time.DateTime
-import net.liftweb.json
-import json._
+import net.liftweb.json._
 
 object TurbineAnalyticsQuery {
 
 	implicit val formats = Serialization.formats(NoTypeHints)
 
-	def parse(queryStr: String): TurbineAnalyticsQuery = {
-		val jsonObj = json.parse(queryStr)
+	def apply(queryStr: String): TurbineAnalyticsQuery = {
+		val jsonObj = parse(queryStr)
 		jsonObj.extract[TurbineAnalyticsQuery]
 	}
 

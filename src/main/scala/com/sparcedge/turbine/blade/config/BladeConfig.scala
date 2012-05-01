@@ -1,14 +1,13 @@
 package com.sparcedge.turbine.blade.config
 
-import net.liftweb.json
-import json._
+import net.liftweb.json._
 
 object BladeConfig {
 
 	implicit val formats = Serialization.formats(NoTypeHints)
 
-	def parse(confJson: String): BladeConfig = {
-		val jsonObj = json.parse(confJson)
+	def apply(confJson: String): BladeConfig = {
+		val jsonObj = parse(confJson)
 		jsonObj.extract[BladeConfig]
 	}
 }
