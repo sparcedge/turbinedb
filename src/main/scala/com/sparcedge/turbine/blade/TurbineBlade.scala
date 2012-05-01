@@ -9,7 +9,13 @@ object TurbineBlade extends App {
 
 	println("Turbine Blade: running")
 
-	for( rawQuery <- io.Source.stdin.getLines ) {
+	//for( rawQuery <- io.Source.stdin.getLines ) {
+	//	bladeManager ! QueryDispatchRequest(rawQuery)
+	//}
+
+	Iterator.continually(Console.readLine) takeWhile(_ != "") foreach { rawQuery => 
 		bladeManager ! QueryDispatchRequest(rawQuery)
 	}
+
+	actorSystem.shutdown
 }

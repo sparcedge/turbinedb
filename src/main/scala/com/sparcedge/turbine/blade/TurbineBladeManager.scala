@@ -6,7 +6,8 @@ class TurbineBladeManager extends Actor {
 	
 	def receive = {
 		case QueryDispatchRequest(rawQuery) =>
-			println(rawQuery)
+			def query = TurbineAnalyticsQuery.parse(rawQuery)
+			println(query.createCacheSegmentString + ": " + query)
 		case _ =>
 	}
 
