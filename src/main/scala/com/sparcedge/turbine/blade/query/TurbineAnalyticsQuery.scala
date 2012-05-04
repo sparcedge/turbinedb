@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade
+package com.sparcedge.turbine.blade.query
 
 import net.liftweb.json._
 
