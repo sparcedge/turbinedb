@@ -6,3 +6,5 @@ project/boot/
 .cache
 .project
 .classpath
+.idea/
+.idea_modules/

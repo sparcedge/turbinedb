@@ -8,21 +8,30 @@ import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 
 class QueryHandler(mongoConnection: MongoDBConnection) extends Actor {
 
+	var eventCache: EventCache = null
+
+	def populateEventCache(query: TurbineAnalyticsQuery) = {
+		val collection = mongoConnection.collection
+		val q: MongoDBObject = 
+			("ts" $gte query.blade.periodStart.getMillis $lt query.blade.periodEnd.getMillis) ++ 
+			("d" -> new ObjectId(query.blade.domain)) ++
+			("t" -> new ObjectId(query.blade.tenant)) ++
+			("c" -> query.blade.category) 
+		val fields = query.query.requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
+		val cursor = collection.find(q, fields)
+		cursor.batchSize(5000)
+		eventCache = EventCache(cursor)
+		cursor.close()
+	}
+
 	def receive = {
 		case HandleQuery(query) =>
-			val collection = mongoConnection.collection
-			val range = query.query.range.end match {
-				case Some(end) =>
-					("ts" $gte query.query.range.start $lt query.query.range.end.get)
-				case None =>
-					("ts" $gte query.query.range.start)
+			if(eventCache == null) {
+				populateEventCache(query)
 			}
-			val q: MongoDBObject = range ++ 
-				("d" -> new ObjectId(query.blade.domain)) ++
-				("t" -> new ObjectId(query.blade.tenant)) ++
-				("c" -> query.blade.category)
-
-			println(collection.find(q).count)
+			println("EventCache: " + eventCache)
+			val events = eventCache.applyQuery(query)
+			println(events.size)
 		case _ =>
 	}
 }
