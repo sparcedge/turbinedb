@@ -6,9 +6,9 @@ import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 
 object TurbineBlade extends App {
 
-	val configStr = "{\"mongo\": {\"servers\": [{\"host\": \"127.0.0.1\",\"port\": 27017}],\"database\": \"sparc-platform-dev\",\"collection\": \"events\"}}" //args.headOption.getOrElse {
-		//throw new Exception("No Configuration Supplied")
-	//}
+	val configStr = args.headOption.getOrElse {
+		throw new Exception("No Configuration Supplied")
+	}
 
 	val config = BladeConfig(configStr)
 	val actorSystem = ActorSystem("TurbineBladeActorSystem")

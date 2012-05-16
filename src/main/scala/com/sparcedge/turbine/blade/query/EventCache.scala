@@ -18,9 +18,13 @@ object EventCache {
 class EventCache(events: Iterable[Event]) {
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
-		println(events.size)
-		val matchedEvents = applyMatches(query.query.matches)
-		return matchedEvents
+		var matchedEvents = applyMatches(query.query.matches)
+		// Check for no reducers
+		if(true) {
+			matchedEvents = matchedEvents.take(1000)
+		}
+		val groupedEvents = applyGroupings(query.query.groupings, matchedEvents)
+		return groupedEvents
 	}
 
 	def applyMatches(matchesOpt: Iterable[Match]): Iterable[Event] = {
@@ -35,7 +39,23 @@ class EventCache(events: Iterable[Event]) {
 				}
 		}
 	}
+
+	def applyGroupings(groupings: Iterable[Grouping], events: Iterable[Event]): Iterable[Any] = {
+		groupings match {
+			case Nil =>
+				events map (_.toMap)
+			case grouping :: tail =>
+				events groupBy grouping.groupFunction filterKeys (_ != null) map {case (key,value) => 
+					DataGroup(key, applyGroupings(tail,value))
+				}
+		}
+	}
 }
+
+case class DataGroup (
+	group: Any,
+	data: Iterable[Any]
+)
 
 object PartitionManager {
 	def apply(): PartitionManager = {
@@ -89,13 +109,29 @@ case class Event (
 	ddat: Array[Double],
 	keyMap: Map[String,(Int,Int)]
 ) {
-	def apply(key: String): Any = {
-		val (arr,index) = keyMap(key)
-		arr match {
-			case 0 =>
-				odat(index)
-			case 1 =>
-				ddat(index)
+	def apply(segment: String): Option[Any] = {
+		val key = keyMap.get(segment)
+		key match {
+			case Some((arr,index)) =>
+				arr match {
+				case 0 =>
+					Some(odat(index))
+				case 1 =>
+					Some(ddat(index))
+			}
+			case None =>
+				None
+		}
+	}
+
+	def toMap(): Map[String,Any] = {
+		keyMap map { case (segment, (arr,index)) =>
+			arr match {
+				case 0 =>
+					(segment -> odat(index))
+				case 1 =>
+					(segment -> ddat(index))
+			}
 		}
 	}
 }

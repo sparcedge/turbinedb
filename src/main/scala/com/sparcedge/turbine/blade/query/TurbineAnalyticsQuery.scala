@@ -18,7 +18,8 @@ object TurbineAnalyticsQuery {
 
 case class TurbineAnalyticsQuery (
 	blade: Blade,
-	query: Query
+	query: Query,
+	qid: String
 ) {
 	def createCacheSegmentString(): String = {
 		blade.domain + "." + blade.tenant + "." + blade.category + "." + blade.period
@@ -44,7 +45,7 @@ case class Query (
 	reduce: Option[Reduce]
 ) {
 	// TODO: Update to retrieve all required fields not just matches
-	def retrieveRequiredFields: Set[String] = {
+	def retrieveRequiredFields(): Set[String] = {
 		var reqFields = Set[String]()
 		reqFields = reqFields ++ matches.map(_.segment)
 		reqFields
@@ -54,7 +55,8 @@ case class Query (
 	val matches = `match`.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
 		new Match(segment, value.extract[Map[String,JValue]])
 	}
-	lazy val requiredFields = retrieveRequiredFields
+	lazy val requiredFields = retrieveRequiredFields()
+	val groupings = group.getOrElse(List[Grouping]())
 }
 
 case class TimeRange (
@@ -63,10 +65,36 @@ case class TimeRange (
 )
 
 case class Grouping (
-	duration: Option[String],
-	resource: Option[Boolean],
-	segment: Option[String]
-)
+	`type`: String,
+	value: Option[String]
+) {
+	def createGroupFunction(): (Event) => Any = {
+		`type` match {
+			case "duration" =>
+				val formatter = value.get match {
+					case "year" =>
+						DateTimeFormat.forPattern("yyyy")
+					case "month" =>
+						DateTimeFormat.forPattern("yyyy-MM")
+					case "week" =>
+						DateTimeFormat.forPattern("yyyy-ww")
+					case "day" =>
+						DateTimeFormat.forPattern("yyyy-MM-dd")
+					case _ =>
+						throw new Exception("Invalid Duration Value")
+				}
+				{ event: Event => formatter.print(event.ts) }
+			case "resource" =>
+				{ event: Event => event("resource").getOrElse(null) }
+			case "segment" =>
+				{ event: Event => event(value.get).getOrElse(null) }
+			case _ =>
+				throw new Exception("Bad Grouping Type")
+		}
+	}
+
+	lazy val groupFunction = createGroupFunction()
+}
 
 case class Reduce (
 	reducers: Option[List[Reducer]],
@@ -102,15 +130,15 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 			op match {
 				case "eq" =>
 					return { event: Event =>
-						event(segment) == value
+						event(segment).getOrElse(null) == value
 					}
 				case "ne" =>
 					return { event: Event =>
-						event(segment) != value
+						event(segment).getOrElse(null) != value
 					}
 				case "gt" =>
 					return { event: Event =>
-						val eventValue = event(segment)
+						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
 							case (x: Int, y: Integer) =>
 								x > y
@@ -122,7 +150,7 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 					}
 				case "gte" =>
 					return { event: Event =>
-						val eventValue = event(segment)
+						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
 							case (x: Int, y: Integer) =>
 								x > y
@@ -134,7 +162,7 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 					}
 				case "lt" =>
 					return { event: Event =>
-						val eventValue = event(segment)
+						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
 							case (x: Int, y: Integer) =>
 								x > y
@@ -146,7 +174,7 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 					}
 				case "lte" =>
 					return { event: Event =>
-						val eventValue = event(segment)
+						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
 							case (x: Int, y: Integer) =>
 								x > y
