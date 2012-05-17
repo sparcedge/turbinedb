@@ -19,11 +19,19 @@ class EventCache(events: Iterable[Event]) {
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
 		var matchedEvents = applyMatches(query.query.matches)
-		// Check for no reducers
-		if(true) {
+		
+		val reducers = query.query.reduce match {
+			case Some(reduce) =>
+				reduce.reducerList
+			case None =>
+				List[Reducer]()
+		}
+
+		if(reducers.isEmpty) {
 			matchedEvents = matchedEvents.take(1000)
 		}
-		val groupedEvents = applyGroupings(query.query.groupings, matchedEvents)
+
+		val groupedEvents = applyGroupingsAndReducers(query.query.groupings, reducers, matchedEvents)
 		return groupedEvents
 	}
 
@@ -40,14 +48,22 @@ class EventCache(events: Iterable[Event]) {
 		}
 	}
 
-	def applyGroupings(groupings: Iterable[Grouping], events: Iterable[Event]): Iterable[Any] = {
+	def applyGroupingsAndReducers(groupings: Iterable[Grouping], reducers: Iterable[Reducer], events: Iterable[Event]): Iterable[Any] = {
 		groupings match {
 			case Nil =>
-				events map (_.toMap)
+				applyReducers(reducers, events)
 			case grouping :: tail =>
 				events groupBy grouping.groupFunction filterKeys (_ != null) map {case (key,value) => 
-					DataGroup(key, applyGroupings(tail,value))
+					DataGroup(key, applyGroupingsAndReducers(tail,reducers,value))
 				}
+		}
+	}
+
+	def applyReducers(reducers: Iterable[Reducer], events: Iterable[Event]): Iterable[Any] = {
+		if(reducers.isEmpty) {
+			events map (_.toMap)
+		} else {
+			List[Any](reducers.map(_.reduceFunction(events)).toMap)
 		}
 	}
 }
@@ -73,26 +89,29 @@ class PartitionManager {
 		val mapKey = dataList.map(_._1).mkString
 		val hasKeyMap = keyMaps.contains(mapKey)
 		var keyMap = if (hasKeyMap) { keyMaps(mapKey) } else { mutable.Map[String,(Int,Int)]() }
-		var count = 0
+		var ocount = 0
+		var dcount = 0
 		dataList.foreach { case (key,value) =>
 			value match {
 				case x: java.lang.Double =>
 					darr += x.toDouble
 					if(!hasKeyMap) {
-						keyMap(key) = (1 -> count)
+						keyMap(key) = (1 -> dcount)
 					}
+					dcount += 1
 				case x: String =>
 					oarr += x.intern
 					if(!hasKeyMap) {
-						keyMap(key) = (0 -> count)
+						keyMap(key) = (0 -> ocount)
 					}
+					ocount += 1
 				case x =>
 					oarr += x
 					if(!hasKeyMap) {
-						keyMap(key) = (0 -> count)
+						keyMap(key) = (0 -> ocount)
 					}
+					ocount += 1
 			}
-			count += 1
 		}
 
 		if(!hasKeyMap) {

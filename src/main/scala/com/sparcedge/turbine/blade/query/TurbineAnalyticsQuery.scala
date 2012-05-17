@@ -48,6 +48,8 @@ case class Query (
 	def retrieveRequiredFields(): Set[String] = {
 		var reqFields = Set[String]()
 		reqFields = reqFields ++ matches.map(_.segment)
+		reqFields = reqFields ++ groupings.filter(_.`type` == "segment").flatMap(_.value)
+		reqFields = reqFields ++ reduce.map(_.reducerList map (_.segment)).getOrElse(List[String]())
 		reqFields
 	}
 
@@ -99,13 +101,52 @@ case class Grouping (
 case class Reduce (
 	reducers: Option[List[Reducer]],
 	filter: Option[Map[String,JObject]]
-)
+) {
+	implicit val formats = Serialization.formats(NoTypeHints)
+	val filters = filter.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
+		new Match(segment, value.extract[Map[String,JValue]])
+	}
+	val reducerList = reducers.getOrElse(List[Reducer]())
+}
 
 case class Reducer (
 	propertyName: String,
 	reducer: String,
 	segment: String
-)
+) {
+	def createReduceFunction(): (Iterable[Event]) => (String,Any) = {
+	    reducer match {
+			case "max" =>
+				{ events: Iterable[Event] => (propertyName,events.flatMap(_(segment)).flatMap(convertNumeric(_)).max) }
+			case "min" =>
+				{ events: Iterable[Event] => (propertyName,events.flatMap(_(segment)).flatMap(convertNumeric(_)).min) }
+			case "avg" => 
+				{ events: Iterable[Event] => 
+					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
+					(propertyName,numerics.sum / numerics.size)
+				}
+			case "sum" => 
+				{ events: Iterable[Event] => (propertyName,events.flatMap(_(segment)).flatMap(convertNumeric(_)).sum) }
+			case "count" =>
+				{ events: Iterable[Event] => (propertyName,events.flatMap(_(segment)).size) }
+	    }
+	}
+
+	def convertNumeric(maybeNumeric: Any): Option[Double] = {
+	    maybeNumeric match {
+			case x: Int =>
+				Some(x.toDouble)
+			case x: Double =>
+				Some(x)
+			case x: Long =>
+				Some(x.toDouble)
+			case _ =>
+				None
+	    }
+	}
+
+	val reduceFunction = createReduceFunction()
+}
 
 class Match(val segment: String, matchVal: Map[String,JValue]) {
 	val expression = createMatchExpression()
