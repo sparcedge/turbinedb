@@ -15,10 +15,8 @@ class MongoDBConnection(servers: List[MongoDBServer], database: String, collecti
 	val serverAddressList = servers map { s => new ServerAddress(s.host, s.port) }
 	val mongoConnection = serverAddressList match {
 		case server :: Nil =>
-			println("Created Single Connection")
 			MongoConnection(server)
 		case servers =>
-			println("Created ReplSet Connection")
 			MongoConnection(servers)
 	}
 

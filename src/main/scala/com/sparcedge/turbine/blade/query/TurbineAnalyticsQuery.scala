@@ -44,7 +44,6 @@ case class Query (
 	group: Option[List[Grouping]],
 	reduce: Option[Reduce]
 ) {
-	// TODO: Update to retrieve all required fields not just matches
 	def retrieveRequiredFields(): Set[String] = {
 		var reqFields = Set[String]()
 		reqFields = reqFields ++ matches.map(_.segment)
@@ -82,6 +81,10 @@ case class Grouping (
 						DateTimeFormat.forPattern("yyyy-ww")
 					case "day" =>
 						DateTimeFormat.forPattern("yyyy-MM-dd")
+					case "hour" =>
+						DateTimeFormat.forPattern("yyyy-MM-dd-hh")
+					case "minute" =>
+						DateTimeFormat.forPattern("yyyy-MM-dd-hh-mm")
 					case _ =>
 						throw new Exception("Invalid Duration Value")
 				}

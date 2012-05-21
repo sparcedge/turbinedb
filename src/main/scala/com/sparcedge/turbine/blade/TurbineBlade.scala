@@ -15,7 +15,7 @@ object TurbineBlade extends App {
 	val mongoConnection = MongoDBConnection(config)
 	val bladeManager = actorSystem.actorOf(Props(new TurbineBladeManager(mongoConnection)), name = "BladeManager")
 
-	println("Turbine Blade: running")
+	println("{\"status\": \"running\"}")
 
 	for( rawQuery <- io.Source.stdin.getLines ) {
 		bladeManager ! QueryDispatchRequest(rawQuery)
