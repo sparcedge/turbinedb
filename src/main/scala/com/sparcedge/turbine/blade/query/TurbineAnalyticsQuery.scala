@@ -117,6 +117,7 @@ case class Reducer (
 	reducer: String,
 	segment: String
 ) {
+	// Remove FlatMaps (Not Performant)
 	def createReduceFunction(): (Iterable[Event]) => (String,Any) = {
 	    reducer match {
 			case "max" =>

@@ -54,7 +54,7 @@ class EventCache(events: Iterable[Event]) {
 				applyReducers(reducers, events)
 			case grouping :: tail =>
 				events groupBy grouping.groupFunction filterKeys (_ != null) map {case (key,value) => 
-					DataGroup(key, applyGroupingsAndReducers(tail,reducers,value))
+					DataGroup(key, applyGroupingsAndReducers(tail,reducers,value), Some(Map[String,Any]("count" -> value.size)))
 				}
 		}
 	}
@@ -70,7 +70,8 @@ class EventCache(events: Iterable[Event]) {
 
 case class DataGroup (
 	group: Any,
-	data: Iterable[Any]
+	data: Iterable[Any],
+	meta: Option[Map[String,Any]] = None
 )
 
 object PartitionManager {
@@ -82,6 +83,7 @@ object PartitionManager {
 class PartitionManager {
 	val keyMaps = mutable.Map[String, mutable.Map[String,(Int,Int)]]()
 
+	// String.intern() provides very poor porformance
 	def partitionData(mongoObj: DBObject, resource: String): (Map[String,(Int,Int)],Array[Any],Array[Double]) = {
 		val oarr = mutable.ListBuffer[Any]()
 		val darr = mutable.ListBuffer[Double]()
