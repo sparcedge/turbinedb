@@ -51,27 +51,30 @@ class EventCache(events: Iterable[Event]) {
 	def applyGroupingsAndReducers(groupings: Iterable[Grouping], reducers: Iterable[Reducer], events: Iterable[Event]): Iterable[Any] = {
 		groupings match {
 			case Nil =>
-				applyReducers(reducers, events)
+				val (reducedValues,meta) = applyReducers(reducers,events)
+				val reduceMeta = meta.getOrElse(Map[String,Any]()) + ("count" -> events.size)
+				List[Any](DataGroup(None, reducedValues, reduceMeta))
 			case grouping :: tail =>
 				events groupBy grouping.groupFunction filterKeys (_ != null) map {case (key,value) => 
-					DataGroup(key, applyGroupingsAndReducers(tail,reducers,value), Some(Map[String,Any]("count" -> value.size)))
+					DataGroup(Some(key), applyGroupingsAndReducers(tail,reducers,value), Map[String,Any]("count" -> value.size))
 				}
 		}
 	}
 
-	def applyReducers(reducers: Iterable[Reducer], events: Iterable[Event]): Iterable[Any] = {
+	def applyReducers(reducers: Iterable[Reducer], events: Iterable[Event]): (Iterable[Any],Option[Map[String,Any]]) = {
 		if(reducers.isEmpty) {
-			events map (_.toMap)
+			(events.map(_.toMap),None)
 		} else {
-			List[Any](reducers.map(_.reduceFunction(events)).toMap)
+			val (reducedValues: Iterable[(Any,Any)],meta: Iterable[(String,Any)]) = reducers.map(_.reduceFunction(events)).unzip
+			(List[Any](reducedValues.toMap),Some(meta.toMap))
 		}
 	}
 }
 
 case class DataGroup (
-	group: Any,
+	group: Option[Any] = None,
 	data: Iterable[Any],
-	meta: Option[Map[String,Any]] = None
+	meta: Map[String,Any]
 )
 
 object PartitionManager {
