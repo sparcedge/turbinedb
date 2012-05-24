@@ -17,7 +17,7 @@ object TurbineBlade extends App {
 
 	println("{\"status\": \"running\"}")
 
-	for( rawQuery <- io.Source.stdin.getLines ) {
+	for( rawQuery <- io.Source.fromInputStream(System.in)("UTF-8").getLines ) {
 		bladeManager ! QueryDispatchRequest(rawQuery)
 	}
 
