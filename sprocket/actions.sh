@@ -18,7 +18,7 @@ case "$1" in
         mkdir $SPROCKET_PACKAGE_DIR
 
         echo "Copying one-jar into package directory... "
-        cp `find ./ | grep -i one-jar\.jar` $SPROCKET_PACKAGE_DIR/platform-job-worker.jar
+        cp `find ./ | grep -i one-jar\.jar` $SPROCKET_PACKAGE_DIR/turbine-blade.jar
 
         echo "Replicating deployment bundle to destination... "
         rsync -ravP ./sprocket $SPROCKET_PACKAGE_DIR
