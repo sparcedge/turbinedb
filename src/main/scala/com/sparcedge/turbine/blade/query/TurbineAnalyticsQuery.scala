@@ -133,7 +133,8 @@ case class Reducer (
 			case "avg" => 
 				{ events: Iterable[Event] => 
 					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					((propertyName,numerics.sum / numerics.size),(propertyName + "-count",numerics.size))
+					val average = if (numerics.size > 0) numerics.sum / numerics.size else 0
+					((propertyName,average),(propertyName + "-count",numerics.size))
 				}
 			case "sum" => 
 				{ events: Iterable[Event] => 
