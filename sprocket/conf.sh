@@ -1,0 +1,9 @@
+#!/bin/sh
+
+
+SPROCKET_APP_NAME=turbine-blade
+SPROCKET_PACKAGE_DIR=package
+SPROCKET_DEST_DIR=/data/$SPROCKET_APP_NAME
+
+SPROCKET_CLOUD_USER=sparcloud-boss
+SPROCKET_CLOUD_GROUP=sparcloud
