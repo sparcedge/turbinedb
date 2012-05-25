@@ -5,19 +5,20 @@ import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.MongoCursor
 
 object EventCache {
-	def apply(eventCursor: MongoCursor): EventCache = {
+	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long): EventCache = {
 		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
 		}
-		new EventCache(events)
+		new EventCache(events, periodStart, periodEnd)
 	}
 }
 
-class EventCache(events: Iterable[Event]) {
+class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long) {
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
+		var timeLimitedEvents = limitEventsProcessed(query.query.range.start, query.query.range.end)
 		var matchedEvents = applyMatches(query.query.matches)
 		
 		val reducers = query.query.reduce match {
@@ -33,6 +34,14 @@ class EventCache(events: Iterable[Event]) {
 
 		val groupedEvents = applyGroupingsAndReducers(query.query.groupings, reducers, matchedEvents)
 		return groupedEvents
+	}
+
+	def limitEventsProcessed(start: Long, end: Option[Long]): Iterable[Event] = {
+		if(start > periodStart || (end != None && end.get < periodEnd)) {
+			events.filter(event => event.ts > periodStart && event.ts < periodEnd)
+		} else {
+			events
+		}
 	}
 
 	def applyMatches(matchesOpt: Iterable[Match]): Iterable[Event] = {

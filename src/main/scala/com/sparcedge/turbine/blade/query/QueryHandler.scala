@@ -24,7 +24,7 @@ class QueryHandler(mongoConnection: MongoDBConnection) extends Actor {
 		val fields = query.query.requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
 		val cursor = collection.find(q, fields)
 		cursor.batchSize(5000)
-		eventCache = EventCache(cursor)
+		eventCache = EventCache(cursor, query.blade.periodStart.getMillis, query.blade.periodEnd.getMillis)
 		cursor.close()
 	}
 
