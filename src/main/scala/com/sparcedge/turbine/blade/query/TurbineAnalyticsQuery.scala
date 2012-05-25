@@ -123,23 +123,30 @@ case class Reducer (
 			case "max" =>
 				{ events: Iterable[Event] => 
 					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					((propertyName,numerics.max),(propertyName + "-count",numerics.size))
+					val size = numerics.size
+					val max = if(size > 0) numerics.max else 0
+					((propertyName,max),(propertyName + "-count",size))
 				}
 			case "min" =>
 				{ events: Iterable[Event] => 
 					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					((propertyName,numerics.min),(propertyName + "-count",numerics.size)) 
+					val size = numerics.size
+					val min = if(size > 0) numerics.min else 0
+					((propertyName,min),(propertyName + "-count",size)) 
 				}
 			case "avg" => 
 				{ events: Iterable[Event] => 
 					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					val average = if (numerics.size > 0) numerics.sum / numerics.size else 0
-					((propertyName,average),(propertyName + "-count",numerics.size))
+					val size = numerics.size
+					val average = if (numerics.size > 0) numerics.sum / size else 0
+					((propertyName,average),(propertyName + "-count",size))
 				}
 			case "sum" => 
 				{ events: Iterable[Event] => 
 					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					((propertyName,numerics.sum),(propertyName + "-count",numerics.size))
+					val size = numerics.size
+					val sum = if(size > 0) numerics.sum else 0
+					((propertyName,sum),(propertyName + "-count",size))
 				}
 			case "count" =>
 				{ events: Iterable[Event] => 
