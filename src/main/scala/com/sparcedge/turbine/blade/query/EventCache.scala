@@ -38,7 +38,7 @@ class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long) {
 
 	def limitEventsProcessed(start: Long, end: Option[Long]): Iterable[Event] = {
 		if(start > periodStart || (end != None && end.get < periodEnd)) {
-			events.filter(event => event.ts > start && event.ts < end)
+			events.filter(event => event.ts > start && event.ts < end.get)
 		} else {
 			events
 		}
