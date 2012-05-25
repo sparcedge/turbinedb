@@ -17,8 +17,14 @@ object TurbineBlade extends App {
 
 	println("{\"status\": \"running\"}")
 
-	for( rawQuery <- io.Source.fromInputStream(System.in)("UTF-8").getLines ) {
-		bladeManager ! QueryDispatchRequest(rawQuery)
+	Thread.sleep(5000)
+
+	println("REALLY RUNNING NOW!")
+
+	try {
+		for( rawQuery <- io.Source.fromInputStream(System.in)("UTF-8").getLines ) {
+			bladeManager ! QueryDispatchRequest(rawQuery)
+		}
 	}
 
 	actorSystem.shutdown
