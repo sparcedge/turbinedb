@@ -19,7 +19,7 @@ class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long) {
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
 		var timeLimitedEvents = limitEventsProcessed(query.query.range.start, query.query.range.end)
-		var matchedEvents = applyMatches(query.query.matches)
+		var matchedEvents = applyMatches(timeLimitedEvents, query.query.matches)
 		
 		val reducers = query.query.reduce match {
 			case Some(reduce) =>
@@ -44,12 +44,12 @@ class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long) {
 		}
 	}
 
-	def applyMatches(matchesOpt: Iterable[Match]): Iterable[Event] = {
+	def applyMatches(timeLimitedEvents: Iterable[Event], matchesOpt: Iterable[Match]): Iterable[Event] = {
 		matchesOpt match {
 			case Nil =>
-				events
+				timeLimitedEvents
 			case matches =>
-				events filter { event =>
+				timeLimitedEvents filter { event =>
 					matches forall { matchCriteria =>
 						matchCriteria(event)
 					}
