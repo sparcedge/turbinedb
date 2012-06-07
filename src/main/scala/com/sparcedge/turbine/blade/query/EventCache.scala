@@ -107,6 +107,18 @@ class PartitionManager {
 		var dcount = 0
 		dataList.foreach { case (key,value) =>
 			value match {
+				case x: java.lang.Long =>
+					darr += x.toDouble
+					if(!hasKeyMap) {
+						keyMap(key) = (1 -> dcount)
+					}
+					dcount += 1
+				case x: java.lang.Integer =>
+					darr += x.toDouble
+					if(!hasKeyMap) {
+						keyMap(key) = (1 -> dcount)
+					}
+					dcount += 1
 				case x: java.lang.Double =>
 					darr += x.toDouble
 					if(!hasKeyMap) {
@@ -114,18 +126,12 @@ class PartitionManager {
 					}
 					dcount += 1
 				case x: String =>
-					if(key == "ac-cond-unit1-kW") {
-						println("String: " + x)
-					}
 					oarr += x.intern
 					if(!hasKeyMap) {
 						keyMap(key) = (0 -> ocount)
 					}
 					ocount += 1
 				case x =>
-					if(key == "ac-cond-unit1-kW") {
-						println("Other: " + x)
-					}
 					oarr += x
 					if(!hasKeyMap) {
 						keyMap(key) = (0 -> ocount)
@@ -154,12 +160,6 @@ case class Event (
 			case Some((arr,index)) =>
 				arr match {
 				case 0 =>
-					if(index >= odat.size) {
-						println("Index OutOfBounds for Segment: " + segment)
-						println("KeyMap: " + keyMap)
-						println("odat: " + odat.mkString(","))
-						println("ddat: " + ddat.mkString(","))
-					}
 					Some(odat(index))
 				case 1 =>
 					Some(ddat(index))
