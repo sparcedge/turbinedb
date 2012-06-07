@@ -148,6 +148,12 @@ case class Event (
 			case Some((arr,index)) =>
 				arr match {
 				case 0 =>
+					if(index >= odat.size) {
+						println("Index OutOfBounds for Segment: " + segment)
+						println("KeyMap: " + keyMap)
+						println("odat: " + odat)
+						println("ddat: " + ddat)
+					}
 					Some(odat(index))
 				case 1 =>
 					Some(ddat(index))
