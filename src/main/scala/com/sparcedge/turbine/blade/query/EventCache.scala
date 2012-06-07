@@ -114,12 +114,18 @@ class PartitionManager {
 					}
 					dcount += 1
 				case x: String =>
+					if(key == "ac-cond-unit1-kW") {
+						println("String: " + x)
+					}
 					oarr += x.intern
 					if(!hasKeyMap) {
 						keyMap(key) = (0 -> ocount)
 					}
 					ocount += 1
 				case x =>
+					if(key == "ac-cond-unit1-kW") {
+						println("Other: " + x)
+					}
 					oarr += x
 					if(!hasKeyMap) {
 						keyMap(key) = (0 -> ocount)
