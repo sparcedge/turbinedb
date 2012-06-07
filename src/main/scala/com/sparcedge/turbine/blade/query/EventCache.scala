@@ -175,7 +175,10 @@ object Event {
 		val (keyMap,odat,ddat) = pManager.partitionData(mongoObj, mongoObj("r").toString)
 
 		new Event (
-			mongoObj("ts").asInstanceOf[Double].toLong,
+			mongoObj("ts") match { 
+				case x: java.lang.Long => x
+				case x: java.lang.Double => x.toLong 
+			},
 			odat,
 			ddat,
 			keyMap
