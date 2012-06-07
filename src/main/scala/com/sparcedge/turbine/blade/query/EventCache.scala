@@ -151,8 +151,8 @@ case class Event (
 					if(index >= odat.size) {
 						println("Index OutOfBounds for Segment: " + segment)
 						println("KeyMap: " + keyMap)
-						println("odat: " + odat)
-						println("ddat: " + ddat)
+						println("odat: " + odat.mkString(","))
+						println("ddat: " + ddat.mkString(","))
 					}
 					Some(odat(index))
 				case 1 =>
