@@ -5,17 +5,17 @@ import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.MongoCursor
 
 object EventCache {
-	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long): EventCache = {
+	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long, includedFields: Set[String]): EventCache = {
 		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
 		}
-		new EventCache(events, periodStart, periodEnd)
+		new EventCache(events, periodStart, periodEnd, includedFields)
 	}
 }
 
-class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long) {
+class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long, val includedFields: Set[String]) {
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
 		var timeLimitedEvents = limitEventsProcessed(query.query.range.start, query.query.range.end)
@@ -78,6 +78,14 @@ class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long) {
 			(List[Any](reducedValues.toMap),Some(meta.toMap))
 		}
 	}
+
+	def includesAllFields(fields: Set[String]): Boolean = {
+		fields.subsetOf(includedFields)
+	}
+
+	def getNotIncludedFields(fields: Set[String]): Set[String] = {
+		includedFields.diff(fields)
+	}
 }
 
 case class DataGroup (
@@ -96,10 +104,9 @@ class PartitionManager {
 	val keyMaps = mutable.Map[String, mutable.Map[String,(Int,Int)]]()
 
 	// String.intern() provides very poor porformance
-	def partitionData(mongoObj: DBObject, resource: String): (Map[String,(Int,Int)],Array[Any],Array[Double]) = {
+	def partitionData(dataList: List[(String,Any)]): (Map[String,(Int,Int)],Array[Any],Array[Double]) = {
 		val oarr = mutable.ListBuffer[Any]()
 		val darr = mutable.ListBuffer[Double]()
-		val dataList = mongoObj("dat").asInstanceOf[DBObject].toList.+:("resource" -> resource).sortBy(_._1)
 		val mapKey = dataList.map(_._1).mkString
 		val hasKeyMap = keyMaps.contains(mapKey)
 		var keyMap = if (hasKeyMap) { keyMaps(mapKey) } else { mutable.Map[String,(Int,Int)]() }
@@ -146,13 +153,25 @@ class PartitionManager {
 
 		return (keyMap.toMap, oarr.toArray, darr.toArray)
 	}
+
+	def partitionData(mongoObj: DBObject, resource: String): (Map[String,(Int,Int)],Array[Any],Array[Double]) = {
+		val dataList = mongoObj("dat").asInstanceOf[DBObject].toList.+:("resource" -> resource).sortBy(_._1)
+		partitionData(dataList)
+	}
+
+	def mergeData(mongoObj: DBObject, event: Event, keyMap: Map[String,(Int,Int)]): (Map[String,(Int,Int)],Array[Any],Array[Double]) = {
+		val oarr = mutable.ListBuffer[Any]()
+		val darr = mutable.ListBuffer[Double]()
+		val dataList = mongoObj("dat").asInstanceOf[DBObject].toList ++ keyMap.map { case (x,y) => (x -> event(x).get) }
+		partitionData(dataList)
+	}
 }
 
 case class Event (
 	ts: Long,
-	odat: Array[Any],
-	ddat: Array[Double],
-	keyMap: Map[String,(Int,Int)]
+	var odat: Array[Any],
+	var ddat: Array[Double],
+	var keyMap: Map[String,(Int,Int)]
 ) {
 	def apply(segment: String): Option[Any] = {
 		val key = keyMap.get(segment)
@@ -178,6 +197,13 @@ case class Event (
 					(segment -> ddat(index))
 			}
 		}
+	}
+
+	def updateEventData(mongoObj: DBObject, pManager: PartitionManager) {
+		val (newKeyMap,newOdat,newDdat) = pManager.mergeData(mongoObj, this, keyMap)
+		keyMap = newKeyMap
+		odat = newOdat
+		ddat = newDdat
 	}
 }
 

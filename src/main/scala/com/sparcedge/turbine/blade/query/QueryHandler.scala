@@ -14,26 +14,38 @@ class QueryHandler(mongoConnection: MongoDBConnection) extends Actor {
     
 	var eventCache: EventCache = null
 
-	def populateEventCache(query: TurbineAnalyticsQuery) = {
+	def populateEventCache(query: TurbineAnalyticsQuery) {
+		populateEventCache(query, query.query.requiredFields)
+	}
+
+	def populateEventCache(query: TurbineAnalyticsQuery, requiredFields: Set[String]) {
 		val collection = mongoConnection.collection
 		val q: MongoDBObject = 
 			("ts" $gte query.blade.periodStart.getMillis $lt query.blade.periodEnd.getMillis) ++ 
 			("d" -> new ObjectId(query.blade.domain)) ++
 			("t" -> new ObjectId(query.blade.tenant)) ++
 			("c" -> query.blade.category) 
-		val fields = query.query.requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
+		val fields = requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
 		val cursor = collection.find(q, fields)
 		cursor.batchSize(5000)
-		eventCache = EventCache(cursor, query.blade.periodStart.getMillis, query.blade.periodEnd.getMillis)
+		eventCache = EventCache(cursor, query.blade.periodStart.getMillis, query.blade.periodEnd.getMillis, requiredFields)
 		cursor.close()
+	}
+
+	def updateEventCache(query: TurbineAnalyticsQuery) = {
+		val includedFields = eventCache.includedFields
+		eventCache = null
+		populateEventCache(query, query.query.requiredFields ++ includedFields)
 	}
 
 	def receive = {
 		case HandleQuery(query) =>
 			if(eventCache == null) {
 				populateEventCache(query)
+			} else if(!eventCache.includesAllFields(query.query.requiredFields)) {
+				updateEventCache(query)
 			}
-			//println("EventCache: " + eventCache)
+
 			val results = eventCache.applyQuery(query)
 			val json = Map[String,Any](
 				"results" -> results, 

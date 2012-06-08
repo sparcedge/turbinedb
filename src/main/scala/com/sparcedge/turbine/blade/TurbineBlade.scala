@@ -10,12 +10,6 @@ object TurbineBlade extends App {
 		throw new Exception("No Configuration Supplied")
 	}
 
-	import scala.collection.JavaConversions._
-
-	for(env <- System.getenv()) {
-		println(env)
-	}
-
 	val config = BladeConfig(configStr)
 	val actorSystem = ActorSystem("TurbineBladeActorSystem")
 	val mongoConnection = MongoDBConnection(config)
