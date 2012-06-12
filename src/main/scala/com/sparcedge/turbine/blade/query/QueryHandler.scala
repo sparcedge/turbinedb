@@ -1,57 +1,43 @@
 package com.sparcedge.turbine.blade.query
 
-import akka.actor.Actor
+import akka.actor.{Actor,ActorRef}
+import akka.util.duration._
+import akka.util.Timeout
 import com.mongodb.casbah.query.Imports._
 import net.liftweb.json.JsonDSL._
+import akka.pattern.ask
 
 import net.liftweb.json._
 
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 
-class QueryHandler(mongoConnection: MongoDBConnection) extends Actor {
+class QueryHandler extends Actor {
 
-    implicit val formats = Serialization.formats(NoTypeHints)
-    
-	var eventCache: EventCache = null
-
-	def populateEventCache(query: TurbineAnalyticsQuery) {
-		populateEventCache(query, query.query.requiredFields)
-	}
-
-	def populateEventCache(query: TurbineAnalyticsQuery, requiredFields: Set[String]) {
-		val collection = mongoConnection.collection
-		val q: MongoDBObject = 
-			("ts" $gte query.blade.periodStart.getMillis $lt query.blade.periodEnd.getMillis) ++ 
-			("d" -> new ObjectId(query.blade.domain)) ++
-			("t" -> new ObjectId(query.blade.tenant)) ++
-			("c" -> query.blade.category) 
-		val fields = requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
-		val cursor = collection.find(q, fields)
-		cursor.batchSize(5000)
-		eventCache = EventCache(cursor, query.blade.periodStart.getMillis, query.blade.periodEnd.getMillis, requiredFields)
-		cursor.close()
-	}
-
-	def updateEventCache(query: TurbineAnalyticsQuery) = {
-		val includedFields = eventCache.includedFields
-		eventCache = null
-		populateEventCache(query, query.query.requiredFields ++ includedFields)
-	}
+	implicit val timeout = Timeout(60 seconds)
+	implicit val formats = Serialization.formats(NoTypeHints)
 
 	def receive = {
-		case HandleQuery(query) =>
-			if(eventCache == null) {
-				populateEventCache(query)
-			} else if(!eventCache.includesAllFields(query.query.requiredFields)) {
-				updateEventCache(query)
-			}
+		case HandleQuery(query, eventCacheManager) =>
+			val future = eventCacheManager ? EventCacheRequest(query)
 
-			val results = eventCache.applyQuery(query)
-			val json = Map[String,Any](
-				"results" -> results, 
-				"qid" -> query.qid
-			)
-			println(Serialization.write(json))
+			future onSuccess {
+				case EventCacheResponse(eventCache, id) =>
+					try {
+						val results = eventCache.applyQuery(query)
+						val json = Map[String,Any](
+							"results" -> results, 
+							"qid" -> query.qid
+						)
+						println(Serialization.write(json))
+					} catch {
+						case e: Exception =>
+							println("Exception Processing Query ID: " + query.qid + ", Error: " + e.getStackTrace)
+					} finally {
+						eventCacheManager ! EventCacheCheckin(id)
+					}
+
+				case _ =>
+			}
 		case _ =>
 	}
 }
@@ -60,5 +46,5 @@ case class Result (
 	results: Iterable[String]
 )
 
-case class HandleQuery(query: TurbineAnalyticsQuery)
+case class HandleQuery(query: TurbineAnalyticsQuery, cacheManager: ActorRef)
 
