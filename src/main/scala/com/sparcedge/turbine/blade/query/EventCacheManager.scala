@@ -16,6 +16,7 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 
 	var unhandledRequests = List[(ActorRef,TurbineAnalyticsQuery)]()
 	var cacheCheckouts = List[(UUID,Long)]()
+	var eventCacheUpdateRequired = false
 
 	def populateEventCache(query: TurbineAnalyticsQuery) {
 		populateEventCache(query.blade, query.query.requiredFields)
@@ -31,8 +32,24 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 		val fields = requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
 		val cursor = collection.find(q, fields)
 		cursor.batchSize(5000)
-		eventCache = EventCache(cursor, blade.periodStart.getMillis, blade.periodEnd.getMillis, requiredFields)
+		eventCache = EventCache(cursor, blade.periodStart.getMillis, blade.periodEnd.getMillis, requiredFields, blade)
 		cursor.close()
+	}
+
+	def updateEventCacheWithNewEvents() {
+		val blade = eventCache.blade
+		val collection = mongoConnection.collection
+		val q: MongoDBObject = 
+			("ts" $gt eventCache.newestTimestamp $lt blade.periodEnd.getMillis) ++ 
+			("d" -> new ObjectId(blade.domain)) ++
+			("t" -> new ObjectId(blade.tenant)) ++
+			("c" -> blade.category)
+		val fields = eventCache.includedFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1)
+		val cursor = collection.find(q, fields)
+		cursor.batchSize(5000)
+		eventCache.addEventsToCache(cursor)
+		cursor.close()
+		eventCacheUpdateRequired = false
 	}
 
 	def updateEventCache(query: TurbineAnalyticsQuery) {
@@ -80,7 +97,15 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 				unhandledRequests.foreach(ur => checkoutCacheToRequester(ur._1))
 				unhandledRequests = List[(ActorRef,TurbineAnalyticsQuery)]()
 			}
-		case UpdateEventCacheRequest() =>
+			if(cacheCheckouts.size <= 0 && eventCacheUpdateRequired) {
+				updateEventCacheWithNewEvents()
+			}
+		case UpdateEventCacheWithNewEventsRequest() =>
+			if(cacheCheckouts.size <= 0) {
+				updateEventCacheWithNewEvents()
+			} else {
+				eventCacheUpdateRequired = true
+			}
 		case _ =>
 	}
 
@@ -92,4 +117,4 @@ case class EventCacheResponse(eventCache: EventCache, id: UUID)
 
 case class EventCacheCheckin(id: UUID)
 
-case class UpdateEventCacheRequest()
+case class UpdateEventCacheWithNewEventsRequest()

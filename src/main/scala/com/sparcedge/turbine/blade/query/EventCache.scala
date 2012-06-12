@@ -5,17 +5,26 @@ import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.MongoCursor
 
 object EventCache {
-	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long, includedFields: Set[String]): EventCache = {
+	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long, includedFields: Set[String], blade: Blade): EventCache = {
 		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
 		}
-		new EventCache(events, periodStart, periodEnd, includedFields)
+		val newestTimestamp = events.maxBy(_.ts).ts
+		new EventCache(events, periodStart, periodEnd, includedFields, newestTimestamp, blade)
 	}
 }
 
-class EventCache(events: Iterable[Event], periodStart: Long, periodEnd: Long, val includedFields: Set[String]) {
+class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd: Long, val includedFields: Set[String], var newestTimestamp: Long, val blade: Blade) {
+
+	def addEventsToCache(eventCursor: MongoCursor) {
+		val partitionManager = PartitionManager()
+		eventCursor foreach { event =>
+			events += Event(event, partitionManager)
+		}
+		newestTimestamp = events.maxBy(_.ts).ts
+	}
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
 		var timeLimitedEvents = limitEventsProcessed(query.query.range.start, query.query.range.end)
