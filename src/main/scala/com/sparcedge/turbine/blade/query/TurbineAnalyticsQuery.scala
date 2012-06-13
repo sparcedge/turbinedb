@@ -185,7 +185,15 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 			case JInt(jint) => jint
 			case JDouble(jdbl) => jdbl
 			case JBool(jbl) => jbl
+			case jarr: JArray => jarr
 			case _ => None
+		}
+	}
+
+	def convertJArray(maybeJarr: Any): List[Any] = {
+		maybeJarr match {
+			case JArray(jarr) => jarr.map(unboxJValue(_))
+			case _ => List[Any]()
 		}
 	}
 
@@ -250,12 +258,20 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 						}
 					}
 				case "in" =>
+					val values = convertJArray(value)
 					return { event: Event =>
-						false
+						event(segment) match {
+							case Some(segValue) => values.contains(segValue)
+							case None => false
+						}
 					}
 				case "nin" =>
+					val values = convertJArray(value)
 					return { event: Event =>
-						false
+						event(segment) match {
+							case Some(segValue) => !values.contains(segValue)
+							case None => false
+						}
 					}
 			}
 		}
