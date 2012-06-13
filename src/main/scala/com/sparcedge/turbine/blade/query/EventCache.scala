@@ -8,10 +8,17 @@ object EventCache {
 	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long, includedFields: Set[String], blade: Blade): EventCache = {
 		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
+		var newestTimestamp = 0L
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
+			val its = mongoObj("its") match { 
+				case x: java.lang.Long => x
+				case x: java.lang.Double => x.toLong 
+			}
+			if(its > newestTimestamp) {
+				newestTimestamp = its
+			}
 		}
-		val newestTimestamp = events.maxBy(_.ts).ts
 		new EventCache(events, periodStart, periodEnd, includedFields, newestTimestamp, blade)
 	}
 }
@@ -22,8 +29,14 @@ class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd
 		val partitionManager = PartitionManager()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
+			val its = mongoObj("its") match { 
+				case x: java.lang.Long => x
+				case x: java.lang.Double => x.toLong 
+			}
+			if(its > newestTimestamp) {
+				newestTimestamp = its
+			}
 		}
-		newestTimestamp = events.maxBy(_.ts).ts
 	}
 
 	def applyQuery(query: TurbineAnalyticsQuery): Iterable[Any] = {
