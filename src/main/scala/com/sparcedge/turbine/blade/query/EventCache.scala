@@ -11,9 +11,10 @@ object EventCache {
 		var newestTimestamp = 0L
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
-			val its = mongoObj("its") match { 
+			val its: Long = event("its") match { 
 				case x: java.lang.Long => x
 				case x: java.lang.Double => x.toLong 
+				case _ => 0L
 			}
 			if(its > newestTimestamp) {
 				newestTimestamp = its
@@ -29,9 +30,10 @@ class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd
 		val partitionManager = PartitionManager()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
-			val its = mongoObj("its") match { 
+			val its: Long = event("its") match { 
 				case x: java.lang.Long => x
 				case x: java.lang.Double => x.toLong 
+				case _ => 0L
 			}
 			if(its > newestTimestamp) {
 				newestTimestamp = its
