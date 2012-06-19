@@ -182,7 +182,7 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 	def unboxJValue(jval: JValue): Any = {
 		jval match {
 			case JString(jstr) => jstr
-			case JInt(jint) => jint
+			case JInt(jint) => jint.toLong
 			case JDouble(jdbl) => jdbl
 			case JBool(jbl) => jbl
 			case jarr: JArray => jarr
@@ -213,48 +213,40 @@ class Match(val segment: String, matchVal: Map[String,JValue]) {
 					return { event: Event =>
 						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
-							case (x: Int, y: Integer) =>
-								x > y
-							case (x: String, y: String) =>
-								x > y
-							case _ =>
-								false
+							case (x: java.lang.Long, y: java.lang.Double) => x < y
+							case (x: java.lang.Double, y: java.lang.Double) => x < y
+							case (x: String, y: String) => x < y
+							case _ => false
 						}
 					}
 				case "gte" =>
 					return { event: Event =>
 						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
-							case (x: Int, y: Integer) =>
-								x > y
-							case (x: String, y: String) =>
-								x >= y
-							case _ =>
-								false
+							case (x: java.lang.Long, y: java.lang.Double) => x <= y
+							case (x: java.lang.Double, y: java.lang.Double) => x <= y
+							case (x: String, y: String) => x <= y
+							case _ => false
 						}
 					}
 				case "lt" =>
 					return { event: Event =>
 						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
-							case (x: Int, y: Integer) =>
-								x > y
-							case (x: String, y: String) =>
-								x < y
-							case _ =>
-								false
+							case (x: java.lang.Long, y: java.lang.Double) => x > y
+							case (x: java.lang.Double, y: java.lang.Double) => x > y
+							case (x: String, y: String) => x > y
+							case _ => false
 						}
 					}
 				case "lte" =>
 					return { event: Event =>
 						val eventValue = event(segment).getOrElse(null)
 						(value,eventValue) match {
-							case (x: Int, y: Integer) =>
-								x > y
-							case (x: String, y: String) =>
-								x <= y
-							case _ =>
-								false
+							case (x: java.lang.Long, y: java.lang.Double) => x >= y
+							case (x: java.lang.Double, y: java.lang.Double) => x >= y
+							case (x: String, y: String) => x >= y
+							case _ => false
 						}
 					}
 				case "in" =>
