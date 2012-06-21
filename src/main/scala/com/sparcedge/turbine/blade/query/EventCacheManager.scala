@@ -40,7 +40,8 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 		val blade = eventCache.blade
 		val collection = mongoConnection.collection
 		val q: MongoDBObject = 
-			("ts" $gt eventCache.newestTimestamp $lt blade.periodEnd.getMillis) ++ 
+			("ts" $gt blade.periodStart.getMillis $lt blade.periodEnd.getMillis) ++ 
+			("its" $gt eventCache.newestTimestamp) ++
 			("d" -> new ObjectId(blade.domain)) ++
 			("t" -> new ObjectId(blade.tenant)) ++
 			("c" -> blade.category)
