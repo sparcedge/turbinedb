@@ -82,9 +82,9 @@ case class Grouping (
 					case "day" =>
 						DateTimeFormat.forPattern("yyyy-MM-dd")
 					case "hour" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd-hh")
+						DateTimeFormat.forPattern("yyyy-MM-dd-HH")
 					case "minute" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd-hh-mm")
+						DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
 					case _ =>
 						throw new Exception("Invalid Duration Value")
 				}
