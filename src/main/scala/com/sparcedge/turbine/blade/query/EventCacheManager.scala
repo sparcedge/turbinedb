@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.blade.query
 
 import akka.actor.{Actor,ActorRef}
+import akka.dispatch.Future
 import com.mongodb.casbah.query.Imports._
 import net.liftweb.json.JsonDSL._
 import scala.collection.mutable
@@ -11,12 +12,15 @@ import net.liftweb.json._
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 
 class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
-    
+
+	import context.dispatcher
+
 	var eventCache: EventCache = null
 
 	var unhandledRequests = List[(ActorRef,TurbineAnalyticsQuery)]()
 	var cacheCheckouts = List[(UUID,Long)]()
 	var eventCacheUpdateRequired = false
+	var eventCacheUpdate: Option[EventUpdate] = None
 
 	def populateEventCache(query: TurbineAnalyticsQuery) {
 		populateEventCache(query.blade, query.query.requiredFields)
@@ -34,23 +38,6 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 		cursor.batchSize(5000)
 		eventCache = EventCache(cursor, blade.periodStart.getMillis, blade.periodEnd.getMillis, requiredFields, blade)
 		cursor.close()
-	}
-
-	def updateEventCacheWithNewEvents() {
-		val blade = eventCache.blade
-		val collection = mongoConnection.collection
-		val q: MongoDBObject = 
-			("ts" $gt blade.periodStart.getMillis $lt blade.periodEnd.getMillis) ++ 
-			("its" $gt eventCache.newestTimestamp) ++
-			("d" -> new ObjectId(blade.domain)) ++
-			("t" -> new ObjectId(blade.tenant)) ++
-			("c" -> blade.category)
-		val fields = eventCache.includedFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1) ++ ("its" -> 1)
-		val cursor = collection.find(q, fields)
-		cursor.batchSize(5000)
-		eventCache.addEventsToCache(cursor)
-		cursor.close()
-		eventCacheUpdateRequired = false
 	}
 
 	def updateEventCache(query: TurbineAnalyticsQuery) {
@@ -78,6 +65,42 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 		requester ! EventCacheResponse(eventCache, id)
 	}
 
+	def applyEventUpdateToCache(eventUpdate: EventUpdate) {
+		println("Starting Update")
+		val startMillis = System.currentTimeMillis
+		eventCache.applyEventUpdate(eventUpdate)
+		eventCacheUpdateRequired = false
+		val endMillis = System.currentTimeMillis
+		println("Finished update (" + (endMillis - startMillis) + "ms)")
+	}
+
+	def retrieveCurrentEventUpdate(): EventUpdate = {
+		val startMillis = System.currentTimeMillis
+		val blade = eventCache.blade
+		val collection = mongoConnection.collection
+		val q: MongoDBObject = 
+			("ts" $gt blade.periodStart.getMillis $lt blade.periodEnd.getMillis) ++ 
+			("its" $gt eventCache.newestTimestamp) ++
+			("d" -> new ObjectId(blade.domain)) ++
+			("t" -> new ObjectId(blade.tenant)) ++
+			("c" -> blade.category)
+		val fields = eventCache.includedFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1) ++ ("its" -> 1)
+		val cursor = collection.find(q, fields)
+		cursor.batchSize(5000)
+		val eventUpdate = EventCache.convertCursorToEventUpdate(cursor)
+		cursor.close()
+		eventUpdate
+	}
+
+	def prepareAndScheduleEventUpdate() {
+		Future {
+			val currentUpdate = retrieveCurrentEventUpdate()
+			self ! ApplyEventUpdatetoCacheRequest(currentUpdate)
+		} onFailure {
+			case _ => prepareAndScheduleEventUpdate()
+		}
+	}
+
 	def receive = {
 		case EventCacheRequest(query) =>
 			if(eventCache == null) {
@@ -98,14 +121,20 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 				unhandledRequests.foreach(ur => checkoutCacheToRequester(ur._1))
 				unhandledRequests = List[(ActorRef,TurbineAnalyticsQuery)]()
 			}
-			if(cacheCheckouts.size <= 0 && eventCacheUpdateRequired) {
-				updateEventCacheWithNewEvents()
+			if(cacheCheckouts.size <= 0) {
+				eventCacheUpdate.foreach(applyEventUpdateToCache(_))
+				eventCacheUpdate = None
 			}
 		case UpdateEventCacheWithNewEventsRequest() =>
-			if(cacheCheckouts.size <= 0) {
-				updateEventCacheWithNewEvents()
-			} else {
+			if(!eventCacheUpdateRequired) {
 				eventCacheUpdateRequired = true
+				prepareAndScheduleEventUpdate()
+			}
+		case ApplyEventUpdatetoCacheRequest(eventUpdate) =>
+			if(cacheCheckouts.size <= 0) {
+				applyEventUpdateToCache(eventUpdate)
+			} else {
+				eventCacheUpdate = Some(eventUpdate)
 			}
 		case _ =>
 	}
@@ -119,3 +148,5 @@ case class EventCacheResponse(eventCache: EventCache, id: UUID)
 case class EventCacheCheckin(id: UUID)
 
 case class UpdateEventCacheWithNewEventsRequest()
+
+case class ApplyEventUpdatetoCacheRequest(eventUpdate: EventUpdate)

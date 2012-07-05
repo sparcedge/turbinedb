@@ -22,12 +22,11 @@ object EventCache {
 		}
 		new EventCache(events, periodStart, periodEnd, includedFields, newestTimestamp, blade)
 	}
-}
 
-class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd: Long, val includedFields: Set[String], var newestTimestamp: Long, val blade: Blade) {
-
-	def addEventsToCache(eventCursor: MongoCursor) {
+	def convertCursorToEventUpdate(eventCursor: MongoCursor): EventUpdate = {
+		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
+		var newestTimestamp = 0L
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
 			val its: Long = event("its") match { 
@@ -38,6 +37,23 @@ class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd
 			if(its > newestTimestamp) {
 				newestTimestamp = its
 			}
+		}
+		EventUpdate(events, newestTimestamp)
+	}
+}
+
+class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd: Long, val includedFields: Set[String], var newestTimestamp: Long, val blade: Blade) {
+
+	def addEventsToCache(eventCursor: MongoCursor) {
+		val update = EventCache.convertCursorToEventUpdate(eventCursor)
+		applyEventUpdate(update)
+	}
+
+	def applyEventUpdate(eventUpdate: EventUpdate) {
+		events ++= eventUpdate.events
+		val updateTimestamp = eventUpdate.newestTimestamp
+		if(updateTimestamp > newestTimestamp) {
+			newestTimestamp = updateTimestamp
 		}
 	}
 
@@ -230,6 +246,11 @@ case class Event (
 		ddat = newDdat
 	}
 }
+
+case class EventUpdate (
+	events: mutable.ListBuffer[Event],
+	newestTimestamp: Long
+)
 
 object Event {
 	def apply(mongoObj: DBObject, pManager: PartitionManager): Event = {
