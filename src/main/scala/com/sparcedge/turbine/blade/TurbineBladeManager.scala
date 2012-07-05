@@ -18,8 +18,8 @@ class TurbineBladeManager(mongoConnection: MongoDBConnection) extends Actor {
 	val next = new AtomicLong(0)
 
 	context.system.scheduler.schedule(
-		10 seconds,
-    	10 seconds,
+		30 seconds,
+    	30 seconds,
     	self,
     	UpdateCurrentEventCaches()
     )
