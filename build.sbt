@@ -15,6 +15,8 @@ seq(ScctPlugin.scctSettings: _*)
 libraryDependencies ++= Seq (
 	"com.typesafe.akka" % "akka-actor" % "2.0.1",
 	"com.typesafe.akka" % "akka-remote" % "2.0.1",
+	"com.typesafe.akka" % "akka-slf4j" % "2.0.1",
+	"org.slf4j" % "slf4j-nop" % "1.6.4",
 	"com.mongodb.casbah" % "casbah_2.9.0-1" % "2.1.5.0",
 	"net.liftweb" %% "lift-json" % "2.4-M4",
 	"org.scalatest" %% "scalatest" % "1.6.1" % "test",
