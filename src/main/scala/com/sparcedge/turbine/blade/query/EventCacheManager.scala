@@ -66,12 +66,10 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 	}
 
 	def applyEventUpdateToCache(eventUpdate: EventUpdate) {
-		println("Starting Update")
 		val startMillis = System.currentTimeMillis
 		eventCache.applyEventUpdate(eventUpdate)
 		eventCacheUpdateRequired = false
 		val endMillis = System.currentTimeMillis
-		println("Finished update (" + (endMillis - startMillis) + "ms)")
 	}
 
 	def retrieveCurrentEventUpdate(): EventUpdate = {
