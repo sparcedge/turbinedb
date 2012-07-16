@@ -1,5 +1,6 @@
 package com.sparcedge.turbine.blade.query
 
+import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
 import akka.util.duration._
 import akka.util.Timeout
@@ -16,6 +17,12 @@ class QueryHandler extends Actor {
 	implicit val timeout = Timeout(60 seconds)
 	implicit val formats = Serialization.formats(NoTypeHints)
 
+	def getStackTrace(ex: Exception): String = {
+		val writer = new StringWriter()
+		ex.printStackTrace(new PrintWriter(writer))
+		writer.toString
+	}
+
 	def receive = {
 		case HandleQuery(query, eventCacheManager) =>
 			val future = eventCacheManager ? EventCacheRequest(query)
@@ -31,7 +38,8 @@ class QueryHandler extends Actor {
 						println(Serialization.write(json))
 					} catch {
 						case e: Exception =>
-							println("Exception Processing Query ID: " + query.qid + ", Error: " + e.getStackTrace)
+
+							println("Exception Processing Query ID: " + query.qid + ", Error: " + getStackTrace(e))
 					} finally {
 						eventCacheManager ! EventCacheCheckin(id)
 					}

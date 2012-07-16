@@ -78,7 +78,7 @@ class EventCache(events: mutable.ListBuffer[Event], periodStart: Long, periodEnd
 
 	def limitEventsProcessed(start: Long, end: Option[Long]): Iterable[Event] = {
 		if(start > periodStart || (end != None && end.get < periodEnd)) {
-			events.filter(event => event.ts > start && event.ts < end.get)
+			events.filter(event => event.ts > start && (end == None || event.ts < end.get))
 		} else {
 			events
 		}
