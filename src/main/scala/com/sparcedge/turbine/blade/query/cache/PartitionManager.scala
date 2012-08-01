@@ -47,6 +47,8 @@ class PartitionManager {
 						keyMap(key) = (0 -> ocount)
 					}
 					ocount += 1
+				case null =>
+					// Don't add to data list
 				case x =>
 					oarr += x
 					if(!hasKeyMap) {
