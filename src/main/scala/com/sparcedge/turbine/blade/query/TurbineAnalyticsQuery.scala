@@ -1,5 +1,6 @@
 package com.sparcedge.turbine.blade.query
 
+import scala.collection.immutable.TreeMap
 import net.liftweb.json._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -13,25 +14,15 @@ object TurbineAnalyticsQuery {
 		val jsonObj = parse(queryStr)
 		jsonObj.extract[TurbineAnalyticsQuery]
 	}
-
 }
 
-case class TurbineAnalyticsQuery (
-	blade: Blade,
-	query: Query,
-	qid: String
-) {
+case class TurbineAnalyticsQuery(blade: Blade, query: Query, qid: String) {
 	def createCacheSegmentString(): String = {
 		blade.domain + "." + blade.tenant + "." + blade.category + "." + blade.period
 	}
 }
 
-case class Blade (
-	domain: String,
-	tenant: String,
-	category: String,
-	period: String
-) {
+case class Blade(domain: String, tenant: String, category: String, period: String) {
 	val formatter = DateTimeFormat.forPattern("yyyy-MM")
 	val periodStart = formatter.parseDateTime(period)
 	val periodEnd = periodStart.plusMonths(1)
@@ -44,6 +35,20 @@ case class Query (
 	group: Option[List[Grouping]],
 	reduce: Option[Reduce]
 ) {
+	val hourFormatter = DateTimeFormat.forPattern("yyyy-MM-hh")
+	val startHour = hourFormatter.print(new DateTime(range.start))
+	val startPlusHour = hourFormatter.print(new DateTime(range.start).plusHours(1))
+	val startPlusHourDate = hourFormatter.parseDateTime(startPlusHour)
+	val endHour = range.end.map { end: Long => hourFormatter.print(new DateTime(end)) }
+	val endHourDate = endHour.map(hourFormatter.parseDateTime(_))
+	val orderedMatches = `match`.map(unorderedMatches => TreeMap(unorderedMatches.toArray:_*))
+
+	def createAggregateCacheString(reducer: Reducer): String = {		
+		val cacheStr = orderedMatches.mkString + "-" + group.mkString + "-" + reducer.reducer
+		println(cacheStr)
+		cacheStr
+	}
+
 	def retrieveRequiredFields(): Set[String] = {
 		var reqFields = Set[String]()
 		reqFields = reqFields ++ matches.map(_.segment)
@@ -60,213 +65,4 @@ case class Query (
 	val groupings = group.getOrElse(List[Grouping]())
 }
 
-case class TimeRange (
-	start: Long,
-	end: Option[Long]
-)
-
-case class Grouping (
-	`type`: String,
-	value: Option[String]
-) {
-	def createGroupFunction(): (Event) => Any = {
-		`type` match {
-			case "duration" =>
-				val formatter = value.get match {
-					case "year" =>
-						DateTimeFormat.forPattern("yyyy")
-					case "month" =>
-						DateTimeFormat.forPattern("yyyy-MM")
-					case "week" =>
-						DateTimeFormat.forPattern("yyyy-ww")
-					case "day" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd")
-					case "hour" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd-HH")
-					case "minute" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
-					case _ =>
-						throw new Exception("Invalid Duration Value")
-				}
-				{ event: Event => formatter.print(event.ts) }
-			case "resource" =>
-				{ event: Event => event("resource").getOrElse(null) }
-			case "segment" =>
-				{ event: Event => event(value.get).getOrElse(null) }
-			case _ =>
-				throw new Exception("Bad Grouping Type")
-		}
-	}
-
-	lazy val groupFunction = createGroupFunction()
-}
-
-case class Reduce (
-	reducers: Option[List[Reducer]],
-	filter: Option[Map[String,JObject]]
-) {
-	implicit val formats = Serialization.formats(NoTypeHints)
-	val filters = filter.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
-		new Match(segment, value.extract[Map[String,JValue]])
-	}
-	val reducerList = reducers.getOrElse(List[Reducer]())
-}
-
-case class Reducer (
-	propertyName: String,
-	reducer: String,
-	segment: String
-) {
-	// Remove FlatMaps (Not Performant)
-	def createReduceFunction(): (Iterable[Event]) => ((String,Any),(String,Any)) = {
-	    reducer match {
-			case "max" =>
-				{ events: Iterable[Event] => 
-					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					val size = numerics.size
-					val max = if(size > 0) numerics.max else 0
-					((propertyName,max),(propertyName + "-count",size))
-				}
-			case "min" =>
-				{ events: Iterable[Event] => 
-					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					val size = numerics.size
-					val min = if(size > 0) numerics.min else 0
-					((propertyName,min),(propertyName + "-count",size)) 
-				}
-			case "avg" => 
-				{ events: Iterable[Event] => 
-					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					val size = numerics.size
-					val average = if (numerics.size > 0) numerics.sum / size else 0
-					((propertyName,average),(propertyName + "-count",size))
-				}
-			case "sum" => 
-				{ events: Iterable[Event] => 
-					val numerics = events.flatMap(_(segment)).flatMap(convertNumeric(_))
-					val size = numerics.size
-					val sum = if(size > 0) numerics.sum else 0
-					((propertyName,sum),(propertyName + "-count",size))
-				}
-			case "count" =>
-				{ events: Iterable[Event] => 
-					val properties = events.flatMap(_(segment))
-					((propertyName,properties.size),(propertyName + "-count",properties.size))
-				}
-	    }
-	}
-
-	def convertNumeric(maybeNumeric: Any): Option[Double] = {
-	    maybeNumeric match {
-			case x: Int =>
-				Some(x.toDouble)
-			case x: Double =>
-				Some(x)
-			case x: Long =>
-				Some(x.toDouble)
-			case _ =>
-				None
-	    }
-	}
-
-	val reduceFunction = createReduceFunction()
-}
-
-class Match(val segment: String, matchVal: Map[String,JValue]) {
-	val expression = createMatchExpression()
-
-	def apply(event: Event): Boolean = {
-		expression(event)
-	}
-
-	def unboxJValue(jval: JValue): Any = {
-		jval match {
-			case JString(jstr) => jstr
-			case JInt(jint) => jint.toLong
-			case JDouble(jdbl) => jdbl
-			case JBool(jbl) => jbl
-			case jarr: JArray => jarr
-			case _ => None
-		}
-	}
-
-	def convertJArray(maybeJarr: Any): List[Any] = {
-		maybeJarr match {
-			case JArray(jarr) => jarr.map(unboxJValue(_))
-			case _ => List[Any]()
-		}
-	}
-
-	def createMatchExpression(): Event => Boolean = {
-		matchVal.head match { case(op, boxedVal) =>
-			val value = unboxJValue(boxedVal)
-			op match {
-				case "eq" =>
-					return { event: Event =>
-						event(segment).getOrElse(null) == value
-					}
-				case "ne" =>
-					return { event: Event =>
-						event(segment).getOrElse(null) != value
-					}
-				case "gt" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
-							case (x: java.lang.Long, y: java.lang.Double) => x < y
-							case (x: java.lang.Double, y: java.lang.Double) => x < y
-							case (x: String, y: String) => x < y
-							case _ => false
-						}
-					}
-				case "gte" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
-							case (x: java.lang.Long, y: java.lang.Double) => x <= y
-							case (x: java.lang.Double, y: java.lang.Double) => x <= y
-							case (x: String, y: String) => x <= y
-							case _ => false
-						}
-					}
-				case "lt" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
-							case (x: java.lang.Long, y: java.lang.Double) => x > y
-							case (x: java.lang.Double, y: java.lang.Double) => x > y
-							case (x: String, y: String) => x > y
-							case _ => false
-						}
-					}
-				case "lte" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
-							case (x: java.lang.Long, y: java.lang.Double) => x >= y
-							case (x: java.lang.Double, y: java.lang.Double) => x >= y
-							case (x: String, y: String) => x >= y
-							case _ => false
-						}
-					}
-				case "in" =>
-					val values = convertJArray(value)
-					return { event: Event =>
-						event(segment) match {
-							case Some(segValue) => values.contains(segValue)
-							case None => false
-						}
-					}
-				case "nin" =>
-					val values = convertJArray(value)
-					return { event: Event =>
-						event(segment) match {
-							case Some(segValue) => !values.contains(segValue)
-							case None => false
-						}
-					}
-			}
-		}
-	} 
-
-}
+case class TimeRange (start: Long, end: Option[Long])

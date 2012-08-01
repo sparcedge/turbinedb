@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.query
+package com.sparcedge.turbine.blade.query.cache
 
 import akka.actor.{Actor,ActorRef}
 import akka.dispatch.Future
@@ -9,6 +9,7 @@ import java.util.UUID
 
 import net.liftweb.json._
 
+import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 
 class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {

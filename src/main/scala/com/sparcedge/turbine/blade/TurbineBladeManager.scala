@@ -5,7 +5,8 @@ import akka.routing.RoundRobinRouter
 import akka.util.duration._
 import java.util.concurrent.atomic.AtomicLong
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
-import com.sparcedge.turbine.blade.query.{TurbineAnalyticsQuery,QueryHandler,HandleQuery,EventCacheManager,UpdateEventCacheWithNewEventsRequest}
+import com.sparcedge.turbine.blade.query.{TurbineAnalyticsQuery,QueryHandler,HandleQuery}
+import com.sparcedge.turbine.blade.query.cache.{EventCacheManager,UpdateEventCacheWithNewEventsRequest}
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
