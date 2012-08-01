@@ -26,12 +26,6 @@ class QueryHandler extends Actor {
 		writer.toString
 	}
 
-	def getStackTrace(ex: Exception): String = {
-		val writer = new StringWriter()
-		ex.printStackTrace(new PrintWriter(writer))
-		writer.toString
-	}
-
 	def receive = {
 		case HandleQuery(query, eventCacheManager) =>
 			val future = eventCacheManager ? EventCacheRequest(query)
