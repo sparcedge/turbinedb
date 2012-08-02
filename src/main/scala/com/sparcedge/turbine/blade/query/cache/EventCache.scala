@@ -2,6 +2,7 @@ package com.sparcedge.turbine.blade.query.cache
 
 import scala.collection.mutable
 import scala.collection.immutable.TreeMap
+import scala.collection.GenMap
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.MongoCursor
 import akka.dispatch.{Await,Future,ExecutionContext}
@@ -10,9 +11,11 @@ import com.sparcedge.turbine.blade.query._
 
 object EventCache {
 	def apply(eventCursor: MongoCursor, periodStart: Long, periodEnd: Long, includedFields: Set[String], blade: Blade): EventCache = {
+		val timer = new Timer
 		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
 		var newestTimestamp = 0L
+		timer.start()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
 			val its: Long = event("its") match { 
@@ -24,6 +27,7 @@ object EventCache {
 				newestTimestamp = its
 			}
 		}
+		timer.stop("Retrieved All Events From MongoDB")
 		new EventCache(events, periodStart, periodEnd, includedFields, newestTimestamp, blade)
 	}
 
@@ -64,13 +68,20 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 	}
 
 	def applyQuery(query: TurbineAnalyticsQuery)(implicit ec: ExecutionContext): String = {
+		val timer = new Timer()
 		val hasReducers = query.query.reduce.map(_.reducerList.size > 0).getOrElse(false)
 		var json = ""
 
 		if(hasReducers) {
-			val aggregateResults = caclulateAggregateResults(query.query)
-			//val aggregateResults = calculateAggregateResultsFromCache(query.query)
+			timer.start()
+			//val aggregateResults = calculateAggregateResults(query.query)
+			//val aggregateResults = calculateAggregateResultsStreaming(query.query)
+			val aggregateResults = calculateAggregateResultsFromCache(query.query)
+			var endTime = System.currentTimeMillis
+			timer.stop("Query Processing")
+			timer.start()
 			json = CustomJsonSerializer.serializeAggregateGroupMap(aggregateResults)
+			timer.stop("Serialize Results")
 		} else {
 			val timeLimitedEvents = limitEventsProcessed(query.query.range.start, query.query.range.end)
 			var matchedEvents = QueryResolver.applyMatches(timeLimitedEvents, query.query.matches)
@@ -82,11 +93,22 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 		json
 	}
 
-	def caclulateAggregateResults(query: Query): TreeMap[String,Iterable[ReducedResult]] = {
+	def calculateAggregateResults(query: Query): TreeMap[String,Iterable[ReducedResult]] = {
 		val timeLimitedEvents = limitEventsProcessed(query.range.start, query.range.end)
 		var matchedEvents = QueryResolver.applyMatches(timeLimitedEvents, query.matches)
 		val eventGroups = QueryResolver.applyGroupings(matchedEvents, query.groupings)
 		QueryResolver.applyReducersToEventGroupings(eventGroups, query.reduce.get.reducerList)
+	}
+
+	def calculateAggregateResultsStreaming(query: Query): GenMap[String,Iterable[ReducedResult]] = {
+		val timer = new Timer()
+		timer.start()
+		val timeLimitedEvents = limitEventsProcessed(query.range.start, query.range.end)
+		timer.stop("Limit Events Processed By Time")
+		timer.start()
+		val results = QueryResolver.matchGroupReduceEvents(timeLimitedEvents, query.matches, query.groupings, query.reduce.get.reducerList)
+		timer.stop("Streaming Match Group Reduce Events")
+		results
 	}
 
 	def calculateAggregateResultsFromCache(query: Query)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
@@ -118,13 +140,6 @@ case class EventUpdate (
 	events: mutable.ListBuffer[Event],
 	newestTimestamp: Long
 )
-
-
-
-sealed abstract class DataElement(count: Int)
-
-case class DataValue(value: Object, count: Int) extends DataElement(count)
-case class DataGroup(value: List[DataElement], count: Int) extends DataElement(count)
 
 
 

@@ -9,29 +9,24 @@ import akka.util.duration._
 class AggregateCache(cache: EventCache) {
 
 	val aggregateCache = mutable.Map[String,Future[CachedAggregate]]()
-	val hourGrouping = Grouping("duration", Some("hour"))
+	val aggregateGrouping = Grouping("duration", Some("minute"))
 
 	// TODO: Clean up tuple mess
 	def calculateQueryResults(query: Query)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
-		var startTime = System.currentTimeMillis
+		val timer = new Timer()
+
+		timer.start()
 		val aggregates = retrieveCachedAggregatesForQuery(query)
-		var endTime = System.currentTimeMillis
-		println("Create/Retrieve Cached Aggregates: " + (endTime - startTime))
-
-		startTime = System.currentTimeMillis
+		timer.stop("Create/Retrieve Cached Aggregates")
+		timer.start()
 		val updatedAggregates = aggregates.map { case (property,aggregate) => (property,sliceAndMergeBoundaryData(query, aggregate)) }
-		endTime = System.currentTimeMillis
-		println("Slice/Merge Boundary Data: " + (endTime - startTime))
-
-		startTime = System.currentTimeMillis
+		timer.stop("Slice/Merge Boundary Data")
+		timer.start()
 		val reducedAggregates = updatedAggregates.map { case (property,aggregate) => QueryResolver.removeHourGroupFlattendAndReduceAggregate(aggregate, property) }
-		endTime = System.currentTimeMillis
-		println("Flatten/Re-reduce Aggregates: " + (endTime - startTime))
-
-		startTime = System.currentTimeMillis
+		timer.stop("Flatten/Re-reduce Aggregates")
+		timer.start()
 		val flattened = QueryResolver.flattenAggregates(reducedAggregates)
-		endTime = System.currentTimeMillis
-		println("Flatten Grouped Aggregates: " + (endTime - startTime))
+		timer.stop("Flatten Grouped Aggregates")
 
 		flattened
 	}
@@ -58,59 +53,81 @@ class AggregateCache(cache: EventCache) {
 
 	// TODO: Handle case with no groupings
 	private def caclculateAggregate(query: Query, reducer: Reducer): CachedAggregate = {
-		val matchedEvents = QueryResolver.applyMatches(cache.events, query.matches)
-		println(matchedEvents.size)
-		val eventGroupings = QueryResolver.applyGroupings(matchedEvents, hourGrouping :: query.groupings)
-		val aggregates = QueryResolver.applyReducerToEventGroupings(eventGroupings, reducer)
+		val aggregates = QueryResolver.matchGroupReduceEvents(cache.events, query.matches, aggregateGrouping :: query.groupings, reducer)
 		new CachedAggregate (
 			matchSet = query.matches,
 			groupSet = query.groupings,
 			reducer = reducer,
-			aggregateMap = aggregates
+			aggregateMap = TreeMap(aggregates.toArray:_*)
 		)
 	}
 
 	def sliceAndMergeBoundaryData(query: Query, aggregate: CachedAggregate): TreeMap[String,ReducedResult] = {
+		val timer = new Timer()
 		val lowerBoundBroken = query.range.start > cache.periodStart
 		var upperBoundBroken = query.range.end != None && query.range.end.get < cache.periodEnd
 
+		timer.start()
 		val slicedData = sliceAggregate(query, aggregate, lowerBoundBroken, upperBoundBroken)
-		val mergedData = mergeBoundaryData(query, aggregate, slicedData, lowerBoundBroken, upperBoundBroken)
-		mergedData
+		timer.stop("Slice Aggregate", 1)
+
+		timer.start()
+		//mergeBoundaryData(query, aggregate, slicedData, lowerBoundBroken, upperBoundBroken)
+		timer.stop("Merge Boundary Data", 1)
+
+		slicedData
 	}
 
 	def sliceAggregate(query: Query, aggregate: CachedAggregate, lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
+		val timer = new Timer()
 		var sliced = aggregate.aggregateMap
 
 		if(lowerBoundBroken) {
+			timer.start()
 			sliced = sliced.from(query.startPlusHour)
+			timer.stop("Slice Lower Bound", 2)
 		}
 		if(upperBoundBroken) {
+			timer.start()
 			sliced = sliced.to(query.endHour.get)
+			timer.stop("Slice Upper Bound", 2)
 		}
 
 		sliced
 	}
 
 	def mergeBoundaryData(query: Query, aggregate: CachedAggregate, aggregateData: TreeMap[String,ReducedResult], lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
+		val timer = new Timer()
 		var outOfBoundEvents: Iterable[Event] = Nil
 		val startTS = query.startPlusHourDate.toInstant.getMillis
 		val endTS = query.endHourDate.map(_.toInstant.getMillis)
 
 		if(lowerBoundBroken && upperBoundBroken) {
+			timer.start()
 			outOfBoundEvents = cache.limitEventsProcessed() { event: Event => 
 				(event.ts > query.range.start && event.ts < startTS) &&
 				(event.ts < query.range.end.get && event.ts > endTS.get)
 			}
+			timer.stop("Limiting Lower and Upper Bound", 2)
 		} else if(lowerBoundBroken) {
+			timer.start()
 			outOfBoundEvents = cache.limitEventsProcessed() { event: Event => (event.ts > query.range.start && event.ts < startTS) }
+			timer.stop("Limiting Lower Only", 2)
 		} else if(upperBoundBroken) {
+			timer.start()
 			outOfBoundEvents = cache.limitEventsProcessed() { event: Event => (event.ts < query.range.end.get && event.ts > endTS.get) }
+			timer.stop("Limiting Upper Only", 2)
 		}
 
+		timer.start()
 		val matchedEvents = QueryResolver.applyMatches(outOfBoundEvents, query.matches)
-		val eventGroupings = QueryResolver.applyGroupings(matchedEvents, hourGrouping :: query.groupings)
+		timer.stop("Applying Matches To Out of Bounds", 2)
+		timer.start()
+		val eventGroupings = QueryResolver.applyGroupings(matchedEvents, aggregateGrouping :: query.groupings)
+		timer.stop("Grouping Out of Bounds", 2)
+		timer.start()
 		val boundaryAggregates = QueryResolver.applyReducerToEventGroupings(eventGroupings, aggregate.reducer)
+		timer.stop("Reducing Out of Bounds", 2)
 		aggregateData ++ boundaryAggregates
 	}
 

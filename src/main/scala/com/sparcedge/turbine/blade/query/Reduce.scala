@@ -50,7 +50,25 @@ class Reducer (val propertyName: String, val reducer: String, val segment: Strin
 	    }
 	}
 
+	def createReducedResult(): ReducedResult = {
+		new ReducedResult(segment, reducer, Some(propertyName))
+	}
+
 	val reduceFunction = createReduceFunction()
 }
 
-case class ReducedResult ( property: String, value: Double, count: Int, reducer: String, var output: Option[String] = None)
+class ReducedResult (val segment: String, val reducer: String, var output: Option[String], var value: Double = 0.0, var count: Int = 0) {
+	val streamingReduceFunction = reducer match {
+		case "max" => ReducerFunctions.MAX_STREAMING(_:Double, _:Int, _:Option[Any])
+		case "min" => ReducerFunctions.MIN_STREAMING(_:Double, _:Int, _:Option[Any])
+		case "avg" => ReducerFunctions.AVG_STREAMING(_:Double, _:Int, _:Option[Any])
+		case "sum" => ReducerFunctions.SUM_STREAMING(_:Double, _:Int, _:Option[Any])
+		case "count" => ReducerFunctions.COUNT_STREAMING(_:Double, _:Int, _:Option[Any])
+	}
+
+	def apply(event: Event) {
+		val (newValue,newCount) = streamingReduceFunction(value, count, event(segment))
+		value = newValue
+		count = newCount
+	}
+}

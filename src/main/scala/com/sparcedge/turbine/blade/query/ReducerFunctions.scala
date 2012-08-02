@@ -4,67 +4,116 @@ import com.sparcedge.turbine.blade.query.cache.Event
 
 object ReducerFunctions {
 
-	val MAX = { (segment: String, events: Iterable[Event]) =>
+	def MAX(segment: String, events: Iterable[Event]): ReducedResult = {
 		val numerics = retrieveNumericsForSegment(events, segment)
 		val size = numerics.size
 		val max = if(size > 0) numerics.max else 0
-		ReducedResult(segment, max, size, "max")
+		new ReducedResult(segment, "max", None, max, size)
 	}
 
-	val MAX_REREDUCE = { (results: Iterable[ReducedResult]) =>
+	def MAX_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val max = results.map(_.value).max
 		val count = results.map(_.count).sum
-		ReducedResult(results.head.property, max, count, "max")
+		new ReducedResult(results.head.segment, "max", None, max, count)
 	}
 
-	val MIN = { (segment: String, events: Iterable[Event]) =>
+	def MAX_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
+		convertNumeric(maybeValue) match {
+			case Some(value) => 
+				val newValue = if(value > prevValue) value else prevValue
+				(newValue,count+1)
+			case None => 
+				(prevValue,count)
+		}
+	}
+
+	def MIN(segment: String, events: Iterable[Event]): ReducedResult = {
 		val numerics = retrieveNumericsForSegment(events, segment)
 		val size = numerics.size
 		val min = if(size > 0) numerics.min else 0
-		ReducedResult(segment, min, size, "min")
+		new ReducedResult(segment, "min", None, min, size)
 	}
 
-	val MIN_REREDUCE = { (results: Iterable[ReducedResult]) =>
+	def MIN_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val min = results.map(_.value).min
 		val count = results.map(_.count).sum
-		ReducedResult(results.head.property, min, count, "min")	
+		new ReducedResult(results.head.segment, "min", None, min, count)	
 	}
 
-	val SUM = { (segment: String, events: Iterable[Event]) =>
+	def MIN_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
+		convertNumeric(maybeValue) match {
+			case Some(value) => 
+				val newValue = if(value < prevValue) value else prevValue
+				(newValue, count+1)
+			case None => 
+				(prevValue, count)
+		}
+	}
+
+	def SUM(segment: String, events: Iterable[Event]): ReducedResult = {
 		val numerics = retrieveNumericsForSegment(events, segment)
 		val size = numerics.size
 		val sum = if(size > 0) numerics.sum else 0
-		ReducedResult(segment, sum, size, "sum")
+		new ReducedResult(segment, "sum", None, sum, size)
 	}
 
-	val SUM_REREDUCE = { (results: Iterable[ReducedResult]) =>
+	def SUM_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val sum = results.map(_.value).sum
 		val count = results.map(_.count).sum
-		ReducedResult(results.head.property, sum, count, "sum")
+		new ReducedResult(results.head.segment, "sum", None, sum, count)
 	}
 
-	val AVG = { (segment: String, events: Iterable[Event]) =>
+	def SUM_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
+		convertNumeric(maybeValue) match {
+			case Some(value) => 
+				val newValue = value + prevValue
+				(newValue, count+1)
+			case None => 
+				(prevValue, count)
+		}
+	}
+
+	def AVG(segment: String, events: Iterable[Event]): ReducedResult = {
 		val numerics = retrieveNumericsForSegment(events, segment)
 		val size = numerics.size
 		val average = if (numerics.size > 0) numerics.sum / size else 0
-		ReducedResult(segment, average, size, "avg")
+		new ReducedResult(segment, "avg", None, average, size)
 	}
 
-	val AVG_REREDUCE = { (results: Iterable[ReducedResult]) =>
+	def AVG_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val sum = results.map(_.value).sum
-		val count = results.map(_.count).sum
-		ReducedResult(results.head.property, (sum / count), count, "avg")
+		val count = results.size
+		val totalCount = results.map(_.count).sum
+		new ReducedResult(results.head.segment, "avg", None, (sum / count), totalCount)
 	}
 
-	val COUNT = { (segment: String, events: Iterable[Event]) =>
+	def AVG_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
+		convertNumeric(maybeValue) match {
+			case Some(value) => 
+				val newCount = count + 1
+				val newValue = (value + prevValue) / newCount
+				(newValue, newCount)
+			case None => 
+				(prevValue, count)
+		}
+	}
+
+	def COUNT(segment: String, events: Iterable[Event]): ReducedResult = {
 		val properties = unboxOptions(events.map(_(segment)))
 		val size = properties.size
-		ReducedResult(segment, size.toDouble, size, "count")
+		new ReducedResult(segment, "count", None, size.toDouble, size)
 	}
 
-	val COUNT_REREDUCE = { (results: Iterable[ReducedResult]) =>
+	def COUNT_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val count = results.map(_.count).sum
-		ReducedResult(results.head.property, count, count, "count")
+		new ReducedResult(results.head.segment, "count", None, count, count)
+	}
+
+	def COUNT_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
+		maybeValue match {
+			case Some(value) => (prevValue+1,count+1)
+			case None => (prevValue, count)
+		}
 	}
 
 	def retrieveNumericsForSegment(events: Iterable[Event], segment: String): Iterable[Double] = {
@@ -87,4 +136,5 @@ object ReducerFunctions {
 				None
 	    }
 	}
+
 }

@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.blade.query.cache
 
 import scala.collection.immutable.TreeMap
+import scala.collection.GenMap
 import net.liftweb.json._
 import com.sparcedge.turbine.blade.query._
 
@@ -9,6 +10,10 @@ object CustomJsonSerializer {
 
 	def serializeAggregateGroupMap(aggregateMap: TreeMap[String,Iterable[ReducedResult]]): String = {		
 		serializeGroupMap(aggregateMap, serializeReducedResults, serializeReducedResultsMeta)
+	}
+
+	def serializeAggregateGroupMap(aggregateMap: GenMap[String,Iterable[ReducedResult]]): String = {		
+		serializeGroupMap(TreeMap(aggregateMap.toArray:_*), serializeReducedResults, serializeReducedResultsMeta)
 	}
 
 	def serializeEventGroupMap(eventGroupMap: TreeMap[String,Iterable[Event]]): String = {

@@ -45,7 +45,6 @@ case class Query (
 
 	def createAggregateCacheString(reducer: Reducer): String = {		
 		val cacheStr = orderedMatches.mkString + "-" + group.mkString + "-" + reducer.reducer
-		println(cacheStr)
 		cacheStr
 	}
 

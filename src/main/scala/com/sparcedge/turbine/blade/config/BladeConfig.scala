@@ -13,7 +13,8 @@ object BladeConfig {
 }
 
 case class BladeConfig (
-	mongo: MongoDB
+	mongo: MongoDB,
+	printTimings: Option[Boolean] = Some(false)
 )
 
 case class MongoDB (
