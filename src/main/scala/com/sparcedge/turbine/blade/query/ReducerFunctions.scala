@@ -82,9 +82,8 @@ object ReducerFunctions {
 
 	def AVG_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val sum = results.map(_.value).sum
-		val count = results.size
 		val totalCount = results.map(_.count).sum
-		new ReducedResult(results.head.segment, "avg", None, (sum / count), totalCount)
+		new ReducedResult(results.head.segment, "avg", None, (sum / totalCount), totalCount)
 	}
 
 	def AVG_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
