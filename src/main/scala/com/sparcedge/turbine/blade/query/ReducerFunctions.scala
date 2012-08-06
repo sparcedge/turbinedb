@@ -81,7 +81,7 @@ object ReducerFunctions {
 	}
 
 	def AVG_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
-		val sum = results.map(_.value).sum
+		val sum = results.map(res => res.value * res.count).sum
 		val totalCount = results.map(_.count).sum
 		new ReducedResult(results.head.segment, "avg", None, (sum / totalCount), totalCount)
 	}
@@ -90,7 +90,7 @@ object ReducerFunctions {
 		convertNumeric(maybeValue) match {
 			case Some(value) => 
 				val newCount = count + 1
-				val newValue = (value + prevValue) / newCount
+				val newValue = ((prevValue * count) + value) / newCount
 				(newValue, newCount)
 			case None => 
 				(prevValue, count)

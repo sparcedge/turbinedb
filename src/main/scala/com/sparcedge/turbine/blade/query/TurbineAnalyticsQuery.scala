@@ -43,9 +43,8 @@ case class Query (
 	val endHourDate = endHour.map(hourFormatter.parseDateTime(_))
 	val orderedMatches = `match`.map(unorderedMatches => TreeMap(unorderedMatches.toArray:_*))
 
-	def createAggregateCacheString(reducer: Reducer): String = {		
-		val cacheStr = orderedMatches.mkString + "-" + group.mkString + "-" + reducer.reducer
-		cacheStr
+	def createAggregateCacheString(reducer: Reducer): String = {
+		orderedMatches.mkString + "-" + group.mkString + "-" + reducer.segment + "-" + reducer.reducer
 	}
 
 	def retrieveRequiredFields(): Set[String] = {

@@ -37,19 +37,6 @@ class Reducer (val propertyName: String, val reducer: String, val segment: Strin
 	    }
 	}
 
-	def convertNumeric(maybeNumeric: Any): Option[Double] = {
-	    maybeNumeric match {
-			case x: Int =>
-				Some(x.toDouble)
-			case x: Double =>
-				Some(x)
-			case x: Long =>
-				Some(x.toDouble)
-			case _ =>
-				None
-	    }
-	}
-
 	def createReducedResult(): ReducedResult = {
 		new ReducedResult(segment, reducer, Some(propertyName))
 	}
