@@ -35,12 +35,12 @@ case class Query (
 	group: Option[List[Grouping]],
 	reduce: Option[Reduce]
 ) {
-	val hourFormatter = DateTimeFormat.forPattern("yyyy-MM-hh")
-	val startHour = hourFormatter.print(new DateTime(range.start))
-	val startPlusHour = hourFormatter.print(new DateTime(range.start).plusHours(1))
-	val startPlusHourDate = hourFormatter.parseDateTime(startPlusHour)
-	val endHour = range.end.map { end: Long => hourFormatter.print(new DateTime(end)) }
-	val endHourDate = endHour.map(hourFormatter.parseDateTime(_))
+	val minuteFormatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
+	val startMinute = minuteFormatter.print(new DateTime(range.start))
+	val startPlusMinute = minuteFormatter.print(new DateTime(range.start).plusMinutes(1))
+	val startPlusMinuteDate = minuteFormatter.parseDateTime(startPlusMinute)
+	val endMinute = range.end.map { end: Long => minuteFormatter.print(new DateTime(end)) }
+	val endMinuteDate = endMinute.map(minuteFormatter.parseDateTime(_))
 	val orderedMatches = `match`.map(unorderedMatches => TreeMap(unorderedMatches.toArray:_*))
 
 	def createAggregateCacheString(reducer: Reducer): String = {

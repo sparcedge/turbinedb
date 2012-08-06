@@ -31,7 +31,7 @@ class AggregateCache(cache: EventCache) {
 		flattened
 	}
 
-	def retrieveCachedAggregatesForQuery(query: Query)(implicit ec: ExecutionContext): List[(String,CachedAggregate)] = {
+	private def retrieveCachedAggregatesForQuery(query: Query)(implicit ec: ExecutionContext): List[(String,CachedAggregate)] = {
 		val reducers = query.reduce match {
 			case Some(reduce) => reduce.reducerList
 			case None => List[Reducer]()
@@ -62,7 +62,7 @@ class AggregateCache(cache: EventCache) {
 		)
 	}
 
-	def sliceAndMergeBoundaryData(query: Query, aggregate: CachedAggregate): TreeMap[String,ReducedResult] = {
+	private def sliceAndMergeBoundaryData(query: Query, aggregate: CachedAggregate): TreeMap[String,ReducedResult] = {
 		val timer = new Timer()
 		val lowerBoundBroken = query.range.start > cache.periodStart
 		var upperBoundBroken = query.range.end != None && query.range.end.get < cache.periodEnd
@@ -78,29 +78,29 @@ class AggregateCache(cache: EventCache) {
 		slicedData
 	}
 
-	def sliceAggregate(query: Query, aggregate: CachedAggregate, lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
+	private def sliceAggregate(query: Query, aggregate: CachedAggregate, lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
 		val timer = new Timer()
 		var sliced = aggregate.aggregateMap
 
 		if(lowerBoundBroken) {
 			timer.start()
-			sliced = sliced.from(query.startPlusHour)
+			sliced = sliced.from(query.startPlusMinute)
 			timer.stop("Slice Lower Bound", 2)
 		}
 		if(upperBoundBroken) {
 			timer.start()
-			sliced = sliced.to(query.endHour.get)
+			sliced = sliced.to(query.endMinute.get)
 			timer.stop("Slice Upper Bound", 2)
 		}
 
 		sliced
 	}
 
-	def mergeBoundaryData(query: Query, aggregate: CachedAggregate, aggregateData: TreeMap[String,ReducedResult], lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
+	private def mergeBoundaryData(query: Query, aggregate: CachedAggregate, aggregateData: TreeMap[String,ReducedResult], lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
 		val timer = new Timer()
 		var outOfBoundEvents: Iterable[Event] = Nil
-		val startTS = query.startPlusHourDate.toInstant.getMillis
-		val endTS = query.endHourDate.map(_.toInstant.getMillis)
+		val startTS = query.startPlusMinuteDate.toInstant.getMillis
+		val endTS = query.endMinuteDate.map(_.toInstant.getMillis)
 
 		if(lowerBoundBroken && upperBoundBroken) {
 			timer.start()
