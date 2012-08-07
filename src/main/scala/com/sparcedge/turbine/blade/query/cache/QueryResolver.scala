@@ -76,8 +76,17 @@ object QueryResolver {
 	}
 	/* END STREAMING PROCESSING */
 
+	def applyMatches(events: Iterable[Event], matchLst: Iterable[Match]): Iterable[Event] = {
+		matchLst match {
+			case Nil =>
+				events
+			case matches =>
+				events filter { event =>
+					matches forall { _(event) }
+				}
+		}
+	}
 
-	/* NON-STREAMING QUERY PROCESSING */
 	def applyGroupings(events: Iterable[Event], groupings: Iterable[Grouping]): TreeMap[String,Iterable[Event]] = {
 		val eventGroupings = mutable.Map[String,List[Event]]()
 		events.map(applyGroupingsToEvent(_, groupings)).foreach { case (groupStr, event) =>
@@ -91,39 +100,6 @@ object QueryResolver {
 		val groupStr = groupings.map(_.groupFunction(event)).mkString(GROUP_SEPARATOR)
 		(groupStr,event)
 	}
-
-	def applyReducersToEventGroupings(eventGroupings: TreeMap[String, Iterable[Event]], reducers: Iterable[Reducer]): TreeMap[String, Iterable[ReducedResult]] = {
-		eventGroupings.map { case (key, value) => (key, applyReducers(value, reducers)) }
-	}
-
-	def applyReducers(events: Iterable[Event], reducers: Iterable[Reducer]): Iterable[ReducedResult] = {
-		reducers.map { reducer =>
-			val result = reducer.reduceFunction(events)
-			result.output = Some(reducer.propertyName)
-			result
-		}
-	}
-	
-	def applyReducerToEventGroupings(eventGroupings: TreeMap[String, Iterable[Event]], reducer: Reducer): TreeMap[String, ReducedResult] = {
-		eventGroupings.map { case (key, value) => (key, applyReducer(value, reducer)) }
-	}
-
-	def applyReducer(events: Iterable[Event], reducer: Reducer): ReducedResult = {
-		reducer.reduceFunction(events)
-	}
-
-	def applyMatches(events: Iterable[Event], matchLst: Iterable[Match]): Iterable[Event] = {
-		matchLst match {
-			case Nil =>
-				events
-			case matches =>
-				events filter { event =>
-					matches forall { _(event) }
-				}
-		}
-	}
-	/* END NON-STREAMING QUERY PROCESSING */
-
 
 	def removeHourGroupFlattendAndReduceAggregate(aggregate: TreeMap[String,ReducedResult], output: String): TreeMap[String,ReducedResult] = {
 		val timer = new Timer()

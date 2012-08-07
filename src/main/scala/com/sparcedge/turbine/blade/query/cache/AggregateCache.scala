@@ -11,6 +11,20 @@ class AggregateCache(cache: EventCache) {
 	val aggregateCache = mutable.Map[String,Future[CachedAggregate]]()
 	val aggregateGrouping = Grouping("duration", Some("minute"))
 
+	def updateAggregateCache(events: Iterable[Event]) {
+		val timer = new Timer()
+		timer.start()
+		aggregateCache.values.foreach { cachedAggFuture =>
+			updateCachedAggregateWithEvents(await(cachedAggFuture), events)
+		}
+		timer.stop("Updated Aggregate Cache", 1)
+	}
+
+	private def updateCachedAggregateWithEvents(cachedAggregate: CachedAggregate, events: Iterable[Event]) {
+		val newAggregatesMap = caclculateAggregateMap(events, cachedAggregate.matchSet, cachedAggregate.groupSet, cachedAggregate.reducer)
+		cachedAggregate.aggregateMap = cachedAggregate.aggregateMap ++ newAggregatesMap 
+	}
+
 	// TODO: Clean up tuple mess
 	def calculateQueryResults(query: Query)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
 		val timer = new Timer()
@@ -38,7 +52,11 @@ class AggregateCache(cache: EventCache) {
 		}
 		// TODO: Timeout / Error Handling
 		val propertyReduceMap = reducers.map { reducer => (reducer.propertyName, retrieveAndOptionallyAddCachedAggregate(query, reducer)) }
-		propertyReduceMap.map { case (property,aggFuture) => (property, Await.result(aggFuture, 10 seconds)) }
+		propertyReduceMap.map { case (property,aggFuture) => (property, await(aggFuture)) }
+	}
+
+	private def await[T](future: Future[T]): T = {
+		Await.result(future, 10 seconds)
 	}
 
 	private def retrieveAndOptionallyAddCachedAggregate(query: Query, reducer: Reducer)(implicit ec: ExecutionContext): Future[CachedAggregate] = {
@@ -53,13 +71,18 @@ class AggregateCache(cache: EventCache) {
 
 	// TODO: Handle case with no groupings
 	private def caclculateAggregate(query: Query, reducer: Reducer): CachedAggregate = {
-		val aggregates = QueryResolver.matchGroupReduceEvents(cache.events, query.matches, aggregateGrouping :: query.groupings, reducer)
+		val aggregateMap = caclculateAggregateMap(cache.events, query.matches, query.groupings, reducer)
 		new CachedAggregate (
 			matchSet = query.matches,
 			groupSet = query.groupings,
 			reducer = reducer,
-			aggregateMap = TreeMap(aggregates.toArray:_*)
+			aggregateMap = aggregateMap
 		)
+	}
+
+	private def caclculateAggregateMap(events: Iterable[Event], matches: Iterable[Match], groupings: List[Grouping], reducer: Reducer): TreeMap[String,ReducedResult] = {
+		val aggregates = QueryResolver.matchGroupReduceEvents(events, matches, aggregateGrouping :: groupings, reducer)
+		TreeMap(aggregates.toArray:_*)
 	}
 
 	private def sliceAndMergeBoundaryData(query: Query, aggregate: CachedAggregate): TreeMap[String,ReducedResult] = {
@@ -96,6 +119,7 @@ class AggregateCache(cache: EventCache) {
 		sliced
 	}
 
+	/*
 	private def mergeBoundaryData(query: Query, aggregate: CachedAggregate, aggregateData: TreeMap[String,ReducedResult], lowerBoundBroken: Boolean, upperBoundBroken: Boolean): TreeMap[String,ReducedResult] = {
 		val timer = new Timer()
 		var outOfBoundEvents: Iterable[Event] = Nil
@@ -130,10 +154,11 @@ class AggregateCache(cache: EventCache) {
 		timer.stop("Reducing Out of Bounds", 2)
 		aggregateData ++ boundaryAggregates
 	}
+	*/
 
 }
 
-case class CachedAggregate(matchSet: Iterable[Match], groupSet: Iterable[Grouping], reducer: Reducer, var aggregateMap: TreeMap[String,ReducedResult])
+case class CachedAggregate(matchSet: Iterable[Match], groupSet: List[Grouping], reducer: Reducer, var aggregateMap: TreeMap[String,ReducedResult])
 
 
 

@@ -55,8 +55,11 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 	val aggregateCache = new AggregateCache(this)
 
 	def addEventsToCache(eventCursor: MongoCursor) {
+		val timer = new Timer()
+		timer.start()
 		val update = EventCache.convertCursorToEventUpdate(eventCursor)
 		applyEventUpdate(update)
+		timer.stop("Updated Event Cache")
 	}
 
 	def applyEventUpdate(eventUpdate: EventUpdate) {
@@ -65,6 +68,7 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 		if(updateTimestamp > newestTimestamp) {
 			newestTimestamp = updateTimestamp
 		}
+		aggregateCache.updateAggregateCache(eventUpdate.events)
 	}
 
 	def applyQuery(query: TurbineAnalyticsQuery)(implicit ec: ExecutionContext): String = {
@@ -74,8 +78,6 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 
 		if(hasReducers) {
 			timer.start()
-			//val aggregateResults = calculateAggregateResults(query.query)
-			//val aggregateResults = calculateAggregateResultsStreaming(query.query)
 			val aggregateResults = calculateAggregateResultsFromCache(query.query)
 			var endTime = System.currentTimeMillis
 			timer.stop("Query Processing")
@@ -91,13 +93,6 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 		}
 
 		json
-	}
-
-	def calculateAggregateResults(query: Query): TreeMap[String,Iterable[ReducedResult]] = {
-		val timeLimitedEvents = limitEventsProcessed(query.range.start, query.range.end)
-		var matchedEvents = QueryResolver.applyMatches(timeLimitedEvents, query.matches)
-		val eventGroups = QueryResolver.applyGroupings(matchedEvents, query.groupings)
-		QueryResolver.applyReducersToEventGroupings(eventGroups, query.reduce.get.reducerList)
 	}
 
 	def calculateAggregateResultsStreaming(query: Query): GenMap[String,Iterable[ReducedResult]] = {
