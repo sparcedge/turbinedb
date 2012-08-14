@@ -43,7 +43,7 @@ object ReducerFunctions {
 	def MIN_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
 		convertNumeric(maybeValue) match {
 			case Some(value) => 
-				val newValue = if(value < prevValue) value else prevValue
+				val newValue = if(count == 0 || value < prevValue) value else prevValue
 				(newValue, count+1)
 			case None => 
 				(prevValue, count)
