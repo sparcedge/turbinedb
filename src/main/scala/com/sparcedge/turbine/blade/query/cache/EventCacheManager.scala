@@ -36,7 +36,7 @@ class EventCacheManager(mongoConnection: MongoDBConnection) extends Actor {
 			("c" -> blade.category) 
 		val fields = requiredFields.map(("dat." + _ -> 1)).foldLeft(MongoDBObject())(_ ++ _) ++ ("r" -> 1) ++ ("ts" -> 1) ++ ("its" -> 1)
 		val cursor = collection.find(q, fields)
-		cursor.batchSize(5000)
+		cursor.batchSize(mongoConnection.batchSize)
 		eventCache = EventCache(cursor, blade.periodStart.getMillis, blade.periodEnd.getMillis, requiredFields, blade)
 		cursor.close()
 	}

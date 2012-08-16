@@ -20,7 +20,8 @@ case class BladeConfig (
 case class MongoDB (
 	servers: List[MongoDBServer],
 	database: String,
-	collection: String
+	collection: String,
+	batchSize: Option[Int] = Some(5000)
 )
 
 case class MongoDBServer (

@@ -6,11 +6,11 @@ import com.mongodb.ServerAddress
 
 object MongoDBConnection {
 	def apply(config: BladeConfig): MongoDBConnection = {
-		new MongoDBConnection(config.mongo.servers, config.mongo.database, config.mongo.collection)
+		new MongoDBConnection(config.mongo.servers, config.mongo.database, config.mongo.collection, config.mongo.batchSize.getOrElse(5000))
 	}
 }
 
-class MongoDBConnection(servers: List[MongoDBServer], database: String, collection: String) {
+class MongoDBConnection(servers: List[MongoDBServer], database: String, collection: String, val batchSize: Int) {
 
 	val serverAddressList = servers map { s => new ServerAddress(s.host, s.port) }
 	val mongoConnection = serverAddressList match {
