@@ -56,7 +56,7 @@ class AggregateCache(cache: EventCache) {
 	}
 
 	private def await[T](future: Future[T]): T = {
-		Await.result(future, 10 seconds)
+		Await.result(future, 100 seconds)
 	}
 
 	private def retrieveAndOptionallyAddCachedAggregate(query: Query, reducer: Reducer)(implicit ec: ExecutionContext): Future[CachedAggregate] = {
