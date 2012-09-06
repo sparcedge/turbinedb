@@ -15,6 +15,7 @@ object EventCache {
 		val events = mutable.ListBuffer[Event]()
 		val partitionManager = PartitionManager()
 		var newestTimestamp = 0L
+
 		timer.start()
 		eventCursor foreach { event =>
 			events += Event(event, partitionManager)
@@ -27,7 +28,7 @@ object EventCache {
 				newestTimestamp = its
 			}
 		}
-		timer.stop("Retrieved All Events From MongoDB")
+		timer.stop("Populated Cache (" + blade.period + ")")
 		new EventCache(events, periodStart, periodEnd, includedFields, newestTimestamp, blade)
 	}
 
@@ -78,12 +79,12 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 
 		if(hasReducers) {
 			timer.start()
-			val aggregateResults = calculateAggregateResultsFromCache(query.query)
+			val aggregateResults = calculateAggregateResultsFromCache(query)
 			var endTime = System.currentTimeMillis
-			timer.stop("Query Processing")
+			timer.stop("[" + query.qid + "] Query Processing")
 			timer.start()
 			json = CustomJsonSerializer.serializeAggregateGroupMap(aggregateResults)
-			timer.stop("Serialize Results")
+			timer.stop("[" + query.qid + "] Serialize Results")
 		} else {
 			val timeLimitedEvents = limitEventsProcessed(query.query.range.start, query.query.range.end)
 			var matchedEvents = QueryResolver.applyMatches(timeLimitedEvents, query.query.matches)
@@ -106,7 +107,7 @@ class EventCache(val events: mutable.ListBuffer[Event], val periodStart: Long, v
 		results
 	}
 
-	def calculateAggregateResultsFromCache(query: Query)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
+	def calculateAggregateResultsFromCache(query: TurbineAnalyticsQuery)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
 		aggregateCache.calculateQueryResults(query)
 	}
 

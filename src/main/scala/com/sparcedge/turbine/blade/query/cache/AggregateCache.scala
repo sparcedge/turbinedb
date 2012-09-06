@@ -26,21 +26,21 @@ class AggregateCache(cache: EventCache) {
 	}
 
 	// TODO: Clean up tuple mess
-	def calculateQueryResults(query: Query)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
+	def calculateQueryResults(query: TurbineAnalyticsQuery)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
 		val timer = new Timer()
 
 		timer.start()
-		val aggregates = retrieveCachedAggregatesForQuery(query)
-		timer.stop("Create/Retrieve Cached Aggregates")
+		val aggregates = retrieveCachedAggregatesForQuery(query.query)
+		timer.stop("[" + query.qid + "] Create/Retrieve Cached Aggregates")
 		timer.start()
-		val updatedAggregates = aggregates.map { case (property,aggregate) => (property,sliceAndMergeBoundaryData(query, aggregate)) }
-		timer.stop("Slice/Merge Boundary Data")
+		val updatedAggregates = aggregates.map { case (property,aggregate) => (property,sliceAndMergeBoundaryData(query.query, aggregate)) }
+		timer.stop("[" + query.qid + "] Slice/Merge Boundary Data")
 		timer.start()
 		val reducedAggregates = updatedAggregates.map { case (property,aggregate) => QueryResolver.removeHourGroupFlattendAndReduceAggregate(aggregate, property) }
-		timer.stop("Flatten/Re-reduce Aggregates")
+		timer.stop("[" + query.qid + "] Flatten/Re-reduce Aggregates")
 		timer.start()
 		val flattened = QueryResolver.flattenAggregates(reducedAggregates)
-		timer.stop("Flatten Grouped Aggregates")
+		timer.stop("[" + query.qid + "] Flatten Grouped Aggregates")
 
 		flattened
 	}
