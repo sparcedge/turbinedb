@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.blade.config
 
 import net.liftweb.json._
+import com.sparcedge.turbine.blade.query.Blade
 
 object BladeConfig {
 
@@ -14,6 +15,8 @@ object BladeConfig {
 
 case class BladeConfig (
 	mongo: MongoDB,
+	preloadBlades: Option[List[Blade]] = Some(List[Blade]),
+	dataDirectory: Option[String] = Some("data"),
 	printTimings: Option[Boolean] = Some(false)
 )
 
@@ -37,5 +40,15 @@ case class MongoDBServer (
 		}],
 		"database": "events",
 		"collection": "eventCollection" 
-	}
+	},
+	"dataDirectory": "data",
+	"preloadBlades": [
+		{"domain": "", "tenant": "", "category": "", "period": "YYYYMM"},
+		{"domain": "", "tenant": "", "category": "", "period": "YYYYMM"},
+		{"domain": "", "tenant": "", "category": "", "period": "YYYYMM"},
+		{"domain": "", "tenant": "", "category": "", "period": "YYYYMM"},
+		{"domain": "", "tenant": "", "category": "", "period": "YYYYMM"},
+		{"domain": "", "tenant": "", "category": "", "period": "YYYYMM"}
+	]
+	"printTimings": true
 }*/

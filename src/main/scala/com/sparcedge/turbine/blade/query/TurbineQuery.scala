@@ -4,29 +4,18 @@ import scala.collection.immutable.TreeMap
 import net.liftweb.json._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import com.mongodb.casbah.query.Imports._
 
-object TurbineAnalyticsQuery {
+object TurbineQuery {
 
 	implicit val formats = Serialization.formats(NoTypeHints)
 
-	def apply(queryStr: String): TurbineAnalyticsQuery = {
+	def apply(queryStr: String): TurbineQuery = {
 		val jsonObj = parse(queryStr)
-		jsonObj.extract[TurbineAnalyticsQuery]
+		jsonObj.extract[TurbineQuery]
 	}
 }
 
-case class TurbineAnalyticsQuery(blade: Blade, query: Query, qid: String) {
-	def createCacheSegmentString(): String = {
-		blade.domain + "." + blade.tenant + "." + blade.category + "." + blade.period
-	}
-}
-
-case class Blade(domain: String, tenant: String, category: String, period: String) {
-	val formatter = DateTimeFormat.forPattern("yyyy-MM")
-	val periodStart = formatter.parseDateTime(period)
-	val periodEnd = periodStart.plusMonths(1)
-}
+case class TurbineQuery(blade: Blade, query: Query, qid: String)
 
 case class Query (
 	category: String,

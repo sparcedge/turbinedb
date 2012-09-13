@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.query.cache
+package com.sparcedge.turbine.blade.cache
 
 import scala.collection.mutable
 import scala.collection.GenMap
@@ -74,7 +74,22 @@ object QueryResolver {
 			sReducer(event)
 		}
 	}
+
 	/* END STREAMING PROCESSING */
+
+	/* DISK BASED STREAMING*/
+
+	def matchGroupReduceEventAndUpdateAggregateCalculations(event: Event, matches: Iterable[Match], groupings: Iterable[Grouping], aggregateCalculations: List[(Reducer,mutable.Map[String,ReducedResult])]) {
+		if(eventMatchesAllCriteria(event, matches)) {
+			val grpStr = createGroupStringForEvent(event, groupings)
+			aggregateCalculations foreach { case (reducer, resultMap) =>
+				val streamingReducer = resultMap.getOrElseUpdate(grpStr, reducer.createReducedResult)
+				streamingReducer(event)
+			}
+		}
+	}
+
+	/* END DISK BASED STREAMING*/
 
 	def applyMatches(events: Iterable[Event], matchLst: Iterable[Match]): Iterable[Event] = {
 		matchLst match {
@@ -85,20 +100,6 @@ object QueryResolver {
 					matches forall { _(event) }
 				}
 		}
-	}
-
-	def applyGroupings(events: Iterable[Event], groupings: Iterable[Grouping]): TreeMap[String,Iterable[Event]] = {
-		val eventGroupings = mutable.Map[String,List[Event]]()
-		events.map(applyGroupingsToEvent(_, groupings)).foreach { case (groupStr, event) =>
-			val groupedEvents = eventGroupings.getOrElseUpdate(groupStr, List[Event]())
-			eventGroupings += (groupStr -> (event :: groupedEvents))
-		}
-		TreeMap(eventGroupings.toArray:_*)
-	}
-
-	def applyGroupingsToEvent(event: Event, groupings: Iterable[Grouping]): (String,Event) = {
-		val groupStr = groupings.map(_.groupFunction(event)).mkString(GROUP_SEPARATOR)
-		(groupStr,event)
 	}
 
 	def removeHourGroupFlattendAndReduceAggregate(aggregate: TreeMap[String,ReducedResult], output: String): TreeMap[String,ReducedResult] = {

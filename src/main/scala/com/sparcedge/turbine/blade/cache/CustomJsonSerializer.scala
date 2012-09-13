@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.query.cache
+package com.sparcedge.turbine.cache
 
 import scala.collection.immutable.TreeMap
 import scala.collection.GenMap

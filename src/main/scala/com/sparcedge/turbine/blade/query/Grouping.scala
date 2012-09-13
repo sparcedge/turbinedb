@@ -1,7 +1,7 @@
 package com.sparcedge.turbine.blade.query
 
 import org.joda.time.format.DateTimeFormat
-import com.sparcedge.turbine.blade.query.cache.Event
+import com.sparcedge.turbine.blade.event.Event
 
 case class Grouping (`type`: String, value: Option[String]) {
 	def createGroupFunction(): (Event) => Any = {
