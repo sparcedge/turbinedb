@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.blade.event
 
-import com.sparcedge.turbine.util.BinaryUtil
+import scala.collection.mutable
+import com.sparcedge.turbine.blade.util.BinaryUtil
 
 class LazyEvent(bytes: Array[Byte]) extends Event {
 

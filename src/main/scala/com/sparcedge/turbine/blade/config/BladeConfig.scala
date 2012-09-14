@@ -15,7 +15,7 @@ object BladeConfig {
 
 case class BladeConfig (
 	mongo: MongoDB,
-	preloadBlades: Option[List[Blade]] = Some(List[Blade]),
+	preloadBlades: Option[List[Blade]] = Some(List[Blade]()),
 	dataDirectory: Option[String] = Some("data"),
 	printTimings: Option[Boolean] = Some(false)
 )

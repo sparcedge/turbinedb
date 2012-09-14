@@ -1,11 +1,12 @@
 package com.sparcedge.turbine.blade.event
 
+import scala.collection.mutable
 import com.mongodb.casbah.query.Imports._
 
 object ConcreteEvent {
 	def fromRawEvent(rawEvent: DBObject): ConcreteEvent = {
-		val resource = mongoObj("r").toString
-		val dataList = mongoObj("dat").asInstanceOf[DBObject].toList.+:("resource" -> resource)
+		val resource = rawEvent("r").toString
+		val dataList = rawEvent("dat").asInstanceOf[DBObject].toList.+:("resource" -> resource)
 		val sValues = mutable.Map[String,String]()
 		val dValues = mutable.Map[String,Double]()
 
@@ -20,7 +21,7 @@ object ConcreteEvent {
 			}
 		}
 
-		val ts = mongoObj("ts") match { 
+		val ts: Long = rawEvent("ts") match { 
 			case x: java.lang.Long => x
 			case x: java.lang.Double => x.toLong 
 		}
@@ -31,4 +32,4 @@ object ConcreteEvent {
 
 }
 
-class ConcreteEvent extends Event (val ts: Long, val strValues: Map[String,String], val dblValues: Map[String,Double]) { }
+class ConcreteEvent(val ts: Long, val strValues: mutable.Map[String,String], val dblValues: mutable.Map[String,Double]) extends Event

@@ -11,7 +11,6 @@ import com.sparcedge.turbine.blade.cache._
 class QueryHandler extends Actor {
 
 	implicit val timeout = Timeout(120 seconds)
-	implicit val formats = Serialization.formats(NoTypeHints)
 	implicit val ec: ExecutionContext = context.dispatcher 
 
 	def getStackTrace(ex: Exception): String = {

@@ -3,8 +3,10 @@ package com.sparcedge.turbine.blade.util
 import java.io._
 import java.nio.channels.FileChannel
 import java.nio.ByteBuffer
+import com.mongodb.casbah.query.Imports._
+import com.mongodb.casbah.MongoCursor
 
-import com.sparcedge.turbine.blade.event.{Event,LazyEvent}
+import com.sparcedge.turbine.blade.event.{Event,LazyEvent,ConcreteEvent}
 import com.sparcedge.turbine.blade.query.Blade
 
 object BFFUtil {
@@ -12,13 +14,13 @@ object BFFUtil {
 	var BASE_PATH = "cache"
 
 	def serializeAndAddEvents(events: List[Event], blade: Blade) {
-		val fileName = getFileNameForSegment(blade)
+		val fileName = getDataFileNameForSegment(blade)
 		val fos = new FileOutputStream(fileName, true)
 		val bfos = new BufferedOutputStream(fos, 128 * 100)
 		val numEvents = events.size
 		var cnt = 0
 		while(cnt < numEvents) {
-			val eventBytes = eventToBytes(event)
+			val eventBytes = BinaryUtil.eventToBytes(events(cnt))
 			bfos.write(BinaryUtil.intToBytes(eventBytes.size))
 			bfos.write(eventBytes)
 			cnt += 1
@@ -26,12 +28,12 @@ object BFFUtil {
 	}
 
 	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): Long = {
-		val fileName = getFileNameForSegment(blade)
+		val fileName = getDataFileNameForSegment(blade)
 		val fos = new FileOutputStream(fileName, true)
 		val bfos = new BufferedOutputStream(fos, 128 * 100)
 		var newestTimestamp = 0L
 		cursor foreach { rawEvent =>
-			val its: Long = event("its") match { 
+			val its: Long = rawEvent("its") match { 
 				case x: java.lang.Long => x
 				case x: java.lang.Double => x.toLong 
 				case _ => 0L
@@ -40,10 +42,9 @@ object BFFUtil {
 				newestTimestamp = its
 			}
 
-			val eventBytes = eventToBytes(ConcreteEvent.fromRawEvent(rawEvent))
+			val eventBytes = BinaryUtil.eventToBytes(ConcreteEvent.fromRawEvent(rawEvent))
 			bfos.write(BinaryUtil.intToBytes(eventBytes.size))
 			bfos.write(eventBytes)
-			cnt += 1
 		}
 		newestTimestamp
 	}
@@ -53,12 +54,13 @@ object BFFUtil {
 	}
 
 	def processCachedEvents(blade: Blade)(processFun: (Event) => Unit) {
+		val fileName = getDataFileNameForSegment(blade)
 		val inChannel = new RandomAccessFile(fileName, "r").getChannel
 		val buffer = inChannel.map(FileChannel.MapMode.READ_ONLY, 0, inChannel.size)
 
 		try {
 			while (buffer.hasRemaining) {
-				processFun(readEventFromBuffer(buffer))
+				processFun(readSerializedEventFromBuffer(buffer))
 			}
 		} catch {
 			case e: Exception => e.printStackTrace
@@ -107,7 +109,7 @@ object BFFUtil {
 		new File(getDirectoryForSegment(blade)).mkdirs()
 	}
 
-	def retrieveBladesFromExistingData(): List[Blade] = {
+	def retrieveBladesFromExistingData(): Iterable[Blade] = {
 		val cacheDir = new File(BASE_PATH)
 		val cacheFilesAndDirs = recursiveListFilesAndDirs(cacheDir)
 		val cacheFiles = cacheFilesAndDirs.filter(_.getName.contains(".data"))
@@ -120,7 +122,7 @@ object BFFUtil {
 		new Blade(tokens(0), tokens(1), tokens(2), tokens(3).takeWhile(_ != '.'))
 	}
 
-	def recursiveListFilesAndDirs(f: File): Array[File] = {
+	def recursiveListFilesAndDirs(f: File): Iterable[File] = {
 		val subItems = Option(f.listFiles).getOrElse(Array[File]())
 		subItems ++ subItems.filter(_.isDirectory).flatMap(recursiveListFilesAndDirs)
 	}

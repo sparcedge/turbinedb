@@ -1,7 +1,7 @@
 package com.sparcedge.turbine.blade.util
 
 import scala.collection.mutable
-import com.sparcedge.turbine.blade.event.Event
+import com.sparcedge.turbine.blade.event.{Event,LazyEvent}
 
 /*
 	All operations assume BigIndian byte order

@@ -5,17 +5,19 @@ import akka.routing.RoundRobinRouter
 import akka.util.duration._
 import java.util.concurrent.atomic.AtomicLong
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
-import com.sparcedge.turbine.blade.query.{TurbineQuery,QueryHandler,HandleQuery}
+import com.sparcedge.turbine.blade.query.{TurbineQuery,QueryHandler,HandleQuery,Blade}
 import com.sparcedge.turbine.blade.cache.{EventCacheManager,UpdateEventCacheWithNewEventsRequest}
+import com.sparcedge.turbine.blade.util.BFFUtil
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 
-class TurbineBladeManager(mongoConnection: MongoDBConnection, preloadBlades: List[Blade]) extends Actor {
+class TurbineBladeManager(mongoConn: MongoDBConnection, preloadBlades: List[Blade]) extends Actor {
 	
+	implicit val mongoConnection = mongoConn
 	val actorSegmentCacheMap = discoverExistingBladesAndInitializeNewBlades(preloadBlades)
 	val queryHandlerRouter = context.actorOf(Props[QueryHandler].withRouter(RoundRobinRouter(50)), "QueryHandlerRouter")
-	var eventCacheManagers = IndexedSeq[ActorRef](actorSegmentCacheMap.map(_._2))
+	var eventCacheManagers = (actorSegmentCacheMap.map(_._2)).toIndexedSeq
 	val next = new AtomicLong(0)
 
 	context.system.scheduler.schedule(
@@ -37,7 +39,7 @@ class TurbineBladeManager(mongoConnection: MongoDBConnection, preloadBlades: Lis
 			val query = TurbineQuery(rawQuery)
 			val cacheKey = query.blade.segmentCacheString
 			val cacheManager = actorSegmentCacheMap.getOrElseUpdate(cacheKey, {
-				val man = context.actorOf(Props(new EventCacheManager(mongoConnection)), name = cacheKey)
+				val man = context.actorOf(Props(new EventCacheManager(query.blade)), name = cacheKey)
 				eventCacheManagers = eventCacheManagers :+ man
 				man
 			})
@@ -59,9 +61,9 @@ class TurbineBladeManager(mongoConnection: MongoDBConnection, preloadBlades: Lis
 		val existingBlades = BFFUtil.retrieveBladesFromExistingData()
 		val allBlades = (blades ++ existingBlades).toSet
 		mutable.Map ( 
-			allBlades map { blade =>
-				(blade.segmentCacheString, context.actorOf(Props(new EventCacheManager(mongoConnection)), name = blade.segmentCacheString))
-			}
+			allBlades.toSeq map { blade =>
+				(blade.segmentCacheString, context.actorOf(Props(new EventCacheManager(blade)), name = blade.segmentCacheString))
+			}: _*
 		)
 	}
 }

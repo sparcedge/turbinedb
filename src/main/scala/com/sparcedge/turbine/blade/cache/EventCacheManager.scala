@@ -5,23 +5,19 @@ import akka.dispatch.Future
 import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 
-class EventCacheManager(implicit mongoConnection: MongoDBConnection) extends Actor {
+class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConnection) extends Actor {
 
 	import context.dispatcher
 
 	var eventCache: EventCache = null
-
-	var unhandledRequests = List[(ActorRef,TurbineQuery)]()
-	var cacheCheckouts = List[(UUID,Long)]()
-	var eventCacheUpdateRequired = false
-	var eventCacheUpdate: Option[EventUpdate] = None
+	// TODO: Handle Queries that may come in before this is ready
+	Future {
+		eventCache = EventCache(blade)
+	}
 
 	def receive = {
 		case EventCacheRequest(query) =>
-			if(eventCache == null) {
-				eventCache = EventCache(query.blade)
-			}
-			requester ! EventCacheResponse(eventCache)
+			sender ! EventCacheResponse(eventCache)
 		case UpdateEventCacheWithNewEventsRequest() =>
 			Future {
 				eventCache.update()

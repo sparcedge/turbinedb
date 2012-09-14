@@ -1,9 +1,11 @@
 package com.sparcedge.turbine.blade.event
 
+import scala.collection.mutable
+
 trait Event {
 	def ts: Long
-	def strValues: Map[String,String]
-	def dblValues: Map[String,Double]
+	def strValues: mutable.Map[String,String]
+	def dblValues: mutable.Map[String,Double]
 	
 	def apply(segment: String): Option[Any] = {
 		dblValues.get(segment) orElse strValues.get(segment)	

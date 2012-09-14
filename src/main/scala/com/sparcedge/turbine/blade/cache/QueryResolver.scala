@@ -4,6 +4,8 @@ import scala.collection.mutable
 import scala.collection.GenMap
 import scala.collection.immutable.TreeMap
 import com.sparcedge.turbine.blade.query._
+import com.sparcedge.turbine.blade.event.Event
+import com.sparcedge.turbine.blade.util.Timer
 
 object QueryResolver {
 
@@ -91,17 +93,6 @@ object QueryResolver {
 
 	/* END DISK BASED STREAMING*/
 
-	def applyMatches(events: Iterable[Event], matchLst: Iterable[Match]): Iterable[Event] = {
-		matchLst match {
-			case Nil =>
-				events
-			case matches =>
-				events filter { event =>
-					matches forall { _(event) }
-				}
-		}
-	}
-
 	def removeHourGroupFlattendAndReduceAggregate(aggregate: TreeMap[String,ReducedResult], output: String): TreeMap[String,ReducedResult] = {
 		val timer = new Timer()
 		var flattened = mutable.Map[String,List[ReducedResult]]()
@@ -123,7 +114,7 @@ object QueryResolver {
 		TreeMap(reduced.toArray:_*)
 	}
 
-	def flattenAggregates(aggregates: List[TreeMap[String,ReducedResult]]): TreeMap[String,Iterable[ReducedResult]] = {
+	def flattenAggregates(aggregates: Iterable[TreeMap[String,ReducedResult]]): TreeMap[String,Iterable[ReducedResult]] = {
 		var flattened = mutable.Map[String,List[ReducedResult]]()
 		aggregates foreach { aggregate =>
 			aggregate foreach { case (key,value) =>
