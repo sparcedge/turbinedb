@@ -10,7 +10,6 @@ import com.sparcedge.turbine.blade.cache._
 
 class QueryHandler extends Actor {
 
-	implicit val formats = Serialization.formats(NoTypeHints)
 	implicit val timeout = Timeout(240 seconds)
 	implicit val ec: ExecutionContext = context.dispatcher 
 
