@@ -1,6 +1,6 @@
 package com.sparcedge.turbine.blade.query
 
-import com.sparcedge.turbine.blade.query.cache.Event
+import com.sparcedge.turbine.blade.event.Event
 
 object ReducerFunctions {
 

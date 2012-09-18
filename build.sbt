@@ -22,3 +22,5 @@ libraryDependencies ++= Seq (
 	"org.scalatest" %% "scalatest" % "1.6.1" % "test",
 	"org.mockito" % "mockito-all" % "1.9.0" % "test"
 )
+
+//crossTarget := new File("/Users/bgilbert/projects/sparc/turbine-blade-disk/build")

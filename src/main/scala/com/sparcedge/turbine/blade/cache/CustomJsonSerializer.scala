@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.query.cache
+package com.sparcedge.turbine.blade.cache
 
 import scala.collection.immutable.TreeMap
 import scala.collection.GenMap
@@ -14,10 +14,6 @@ object CustomJsonSerializer {
 
 	def serializeAggregateGroupMap(aggregateMap: GenMap[String,Iterable[ReducedResult]]): String = {		
 		serializeGroupMap(TreeMap(aggregateMap.toArray:_*), serializeReducedResults, serializeReducedResultsMeta)
-	}
-
-	def serializeEventGroupMap(eventGroupMap: TreeMap[String,Iterable[Event]]): String = {
-		serializeGroupMap(eventGroupMap, serializeEvents, serializeEventsMeta)
 	}
 
 	def serializeGroupMap[T<:Any](groupMap: TreeMap[String,Iterable[T]], valueSerializer: (Iterable[T]) => String, metaSerializer: (Iterable[T]) => String): String = {
@@ -74,13 +70,5 @@ object CustomJsonSerializer {
 
 	private def serializeReducedResults(reducedResults: Iterable[ReducedResult]): String = {
 		reducedResults.map(result => "\"" + result.output.get + "\":" + result.value).mkString(",")
-	}
-
-	private def serializeEventsMeta(events: Iterable[Event]): String = {
-		"" // No meta for raw events
-	}
-
-	private def serializeEvents(events: Iterable[Event]): String = {
-		Serialization.write(events)
 	}
 }

@@ -5,19 +5,13 @@ import akka.actor.{Actor,ActorRef}
 import akka.dispatch.ExecutionContext
 import akka.util.duration._
 import akka.util.Timeout
-import com.mongodb.casbah.query.Imports._
-import net.liftweb.json.JsonDSL._
 import akka.pattern.ask
-
-import net.liftweb.json._
-
-import com.sparcedge.turbine.blade.query.cache._
-import com.sparcedge.turbine.blade.mongo.MongoDBConnection
+import com.sparcedge.turbine.blade.cache._
 
 class QueryHandler extends Actor {
 
-	implicit val timeout = Timeout(500 seconds)
 	implicit val formats = Serialization.formats(NoTypeHints)
+	implicit val timeout = Timeout(240 seconds)
 	implicit val ec: ExecutionContext = context.dispatcher 
 
 	def getStackTrace(ex: Exception): String = {
@@ -31,7 +25,7 @@ class QueryHandler extends Actor {
 			val future = eventCacheManager ? EventCacheRequest(query)
 
 			future onSuccess {
-				case EventCacheResponse(eventCache, id) =>
+				case EventCacheResponse(eventCache) =>
 					try {
 						val results = eventCache.applyQuery(query)
 						val json = "{\"qid\":\"" + query.qid + "\",\"results\":" + results + "}"
@@ -40,8 +34,6 @@ class QueryHandler extends Actor {
 						case e: Exception =>
 
 							println("Exception Processing Query ID: " + query.qid + ", Error: " + getStackTrace(e))
-					} finally {
-						eventCacheManager ! EventCacheCheckin(id)
 					}
 
 				case _ =>
@@ -50,9 +42,5 @@ class QueryHandler extends Actor {
 	}
 }
 
-case class Result (
-	results: Iterable[String]
-)
-
-case class HandleQuery(query: TurbineAnalyticsQuery, cacheManager: ActorRef)
+case class HandleQuery(query: TurbineQuery, cacheManager: ActorRef)
 
