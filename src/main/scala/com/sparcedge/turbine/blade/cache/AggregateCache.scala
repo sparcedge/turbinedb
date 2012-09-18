@@ -58,7 +58,9 @@ class AggregateCache(cache: EventCache) {
 			aggFutureMap =  aggFutureMap + (reducer.propertyName -> futureAggregate)
 		}
 
-		calculateAggregatesAndCompletePromises(query, aggPromises)
+		if(aggPromises.size > 0) {
+			calculateAggregatesAndCompletePromises(query, aggPromises)
+		}
 		
 		aggFutureMap
 	}

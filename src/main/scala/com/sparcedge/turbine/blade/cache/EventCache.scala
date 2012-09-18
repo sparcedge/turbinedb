@@ -12,15 +12,20 @@ import org.joda.time.format.DateTimeFormat
 object EventCache {
 
 	def apply(blade: Blade)(implicit mongoConnection: MongoDBConnection): EventCache = {
-		val cursor = createCursor(blade, None)
-		var newestTimestamp = 0L
-		try {
-			BFFUtil.ensureCacheFileExists(blade)
-			newestTimestamp = BFFUtil.serializeAndAddEvents(cursor, blade)
-		} finally {
-			cursor.close()
+		if(BFFUtil.doesCacheFileExist(blade)) {
+			val newestTimestamp = 0L
+			new EventCache(blade, newestTimestamp)
+		} else {
+			val cursor = createCursor(blade, None)
+			var newestTimestamp = 0L
+			try {
+				BFFUtil.ensureCacheFileExists(blade)
+				newestTimestamp = BFFUtil.serializeAndAddEvents(cursor, blade)
+			} finally {
+				cursor.close()
+			}
+			new EventCache(blade, newestTimestamp)
 		}
-		new EventCache(blade, newestTimestamp)
 	}
 
 	def createCursor(blade: Blade, its: Option[Long])(implicit mongoConnection: MongoDBConnection): MongoCursor = {
@@ -32,7 +37,7 @@ object EventCache {
 			("c" -> blade.category)
 		its.foreach(its => q ++ ("its" $gt its))
 		val order: MongoDBObject = MongoDBObject("its" -> 1)
-		val cursor = collection.find(q).sort(order)
+		val cursor = collection.find(q) //.sort(order)
 		cursor.batchSize(mongoConnection.batchSize)
 		cursor
 	}

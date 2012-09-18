@@ -11,13 +11,15 @@ object ConcreteEvent {
 		val dValues = mutable.Map[String,Double]()
 
 		dataList.foreach { case (key,value) =>
-			value match {
-				case x: java.lang.Long => dValues(key) = x.toDouble
-				case x: java.lang.Integer => dValues(key) = x.toDouble
-				case x: java.lang.Double => dValues(key) = x
-				case x: String => sValues(key) = x
-				case null => // Don't add to event
-				case x => // TODO: Handle Exception Unknown Type
+			if(!key.endsWith("-kWh") && !key.endsWith("-amps") && !key.endsWith("-apf")) {
+				value match {
+					case x: java.lang.Long => dValues(key) = x.toDouble
+					case x: java.lang.Integer => dValues(key) = x.toDouble
+					case x: java.lang.Double => dValues(key) = x
+					case x: String => sValues(key) = x
+					case null => // Don't add to event
+					case x => // TODO: Handle Exception Unknown Type
+				}
 			}
 		}
 
@@ -28,8 +30,6 @@ object ConcreteEvent {
 
 		new ConcreteEvent(ts, sValues, dValues)
 	}
-
-
 }
 
 class ConcreteEvent(val ts: Long, val strValues: mutable.Map[String,String], val dblValues: mutable.Map[String,Double]) extends Event

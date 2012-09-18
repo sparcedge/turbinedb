@@ -28,10 +28,13 @@ object BFFUtil {
 	}
 
 	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): Long = {
+		val timer = new Timer
+		var cnt = 0
 		val fileName = getDataFileNameForSegment(blade)
 		val fos = new FileOutputStream(fileName, true)
 		val bfos = new BufferedOutputStream(fos, 128 * 100)
 		var newestTimestamp = 0L
+		timer.start()
 		cursor foreach { rawEvent =>
 			val its: Long = rawEvent("its") match { 
 				case x: java.lang.Long => x
@@ -45,7 +48,13 @@ object BFFUtil {
 			val eventBytes = BinaryUtil.eventToBytes(ConcreteEvent.fromRawEvent(rawEvent))
 			bfos.write(BinaryUtil.intToBytes(eventBytes.size))
 			bfos.write(eventBytes)
-		}
+
+			//cnt += 1
+			//if(cnt % 1000 == 0) {
+			//	println("Imported: " + cnt)
+			//}
+		}	
+		timer.stop("[BFFUtil] Serialized " + cnt + " Events to File")
 		newestTimestamp
 	}
 
@@ -57,17 +66,22 @@ object BFFUtil {
 		val fileName = getDataFileNameForSegment(blade)
 		val inChannel = new RandomAccessFile(fileName, "r").getChannel
 		val buffer = inChannel.map(FileChannel.MapMode.READ_ONLY, 0, inChannel.size)
+		val timer = new Timer
+		var cnt = 0
 
+		timer.start()
 		try {
 			while (buffer.hasRemaining) {
 				processFun(readSerializedEventFromBuffer(buffer))
+				cnt += 1
 			}
 		} catch {
-			case e: Exception => e.printStackTrace
+			case e: Exception => //e.printStackTrace
 		} finally {
 			buffer.clear()
 			inChannel.close()
 		}
+		timer.stop("[BFFUtil] Processed " + cnt + " Events")
 	}
 
 	private def readSerializedEventFromBuffer(buffer: ByteBuffer): LazyEvent = {
@@ -87,6 +101,12 @@ object BFFUtil {
 
 	def getMetaFileNameForSegment(blade: Blade): String = {
 		getDirectoryForSegment(blade) + "/" + blade.period + ".meta"
+	}
+
+	def doesCacheFileExist(blade: Blade): Boolean = {
+		ensureCacheDirectoryExists(blade)
+		val cacheFile = new File(getDataFileNameForSegment(blade))
+		cacheFile.exists
 	}
 
 	def ensureCacheFileExists(blade: Blade) {
@@ -119,7 +139,7 @@ object BFFUtil {
 	def convertCacheFileToBlade(cacheFile: File): Blade = {
 		val path = cacheFile.getAbsolutePath
 		val tokens = path.substring(path.indexOf(BASE_PATH) + BASE_PATH.size).split("/")
-		new Blade(tokens(0), tokens(1), tokens(2), tokens(3).takeWhile(_ != '.'))
+		new Blade(tokens(1), tokens(2), tokens(3), tokens(4).takeWhile(_ != '.'))
 	}
 
 	def recursiveListFilesAndDirs(f: File): Iterable[File] = {

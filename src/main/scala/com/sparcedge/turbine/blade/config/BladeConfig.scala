@@ -39,7 +39,8 @@ case class MongoDBServer (
 			"port": 12345
 		}],
 		"database": "events",
-		"collection": "eventCollection" 
+		"collection": "eventCollection",
+		"batchSize": 10000
 	},
 	"dataDirectory": "data",
 	"preloadBlades": [

@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 import com.sparcedge.turbine.blade.query.{TurbineQuery,QueryHandler,HandleQuery,Blade}
 import com.sparcedge.turbine.blade.cache.{EventCacheManager,UpdateEventCacheWithNewEventsRequest}
-import com.sparcedge.turbine.blade.util.BFFUtil
+import com.sparcedge.turbine.blade.util.{BFFUtil,Timer}
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -58,13 +58,19 @@ class TurbineBladeManager(mongoConn: MongoDBConnection, preloadBlades: List[Blad
 	}
 
 	def discoverExistingBladesAndInitializeNewBlades(blades: List[Blade]): mutable.Map[String,ActorRef] = {
+		val timer = new Timer
+		timer.start()
 		val existingBlades = BFFUtil.retrieveBladesFromExistingData()
+		timer.stop("[TurbineBladeManager] Discovered existing blades (" + existingBlades.size + ")")
+		timer.start()
 		val allBlades = (blades ++ existingBlades).toSet
-		mutable.Map ( 
+		val bladeMap = mutable.Map ( 
 			allBlades.toSeq map { blade =>
 				(blade.segmentCacheString, context.actorOf(Props(new EventCacheManager(blade)), name = blade.segmentCacheString))
 			}: _*
 		)
+		timer.stop("[TurbineBladeManager] Created managers for all new / existing blades (" + allBlades.size + ")")
+		bladeMap
 	}
 }
 
