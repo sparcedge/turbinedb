@@ -99,4 +99,30 @@ object BinaryUtil {
 		new LazyEvent(bytes)
 	}
 
+	def slice(bytes: Array[Byte], start: Int, until: Int): Array[Byte] = {
+		val res = new Array[Byte](until - start)
+		var cnt = start
+		while(cnt < until) {
+			res(cnt - start) = bytes(cnt)
+			cnt += 1
+		}
+		res
+	}
+
+	def join(arr1: Array[Byte], arr2: Array[Byte]): Array[Byte] = {
+		val res = new Array[Byte](arr1.length + arr2.length)
+		var cnt = 0
+		while(cnt < arr1.length) {
+			res(cnt) = arr1(cnt)
+			cnt += 1
+		}
+		val prev = cnt
+		cnt = 0
+		while(cnt < arr2.length){
+			res(prev+cnt) = arr2(cnt)
+			cnt += 1
+		}
+		res
+	}
+
 }

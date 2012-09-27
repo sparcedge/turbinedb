@@ -2,7 +2,6 @@ package com.sparcedge.turbine.blade.util
 
 import java.io._
 import java.nio.channels.FileChannel
-import java.nio.ByteBuffer
 import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.MongoCursor
 
@@ -12,6 +11,7 @@ import com.sparcedge.turbine.blade.query.Blade
 object BFFUtil {
 
 	var BASE_PATH = "cache"
+	val PAGE_SIZE = 1024 * 256
 
 	def serializeAndAddEvents(events: List[Event], blade: Blade) {
 		val fileName = getDataFileNameForSegment(blade)
@@ -64,8 +64,7 @@ object BFFUtil {
 
 	def processCachedEvents(blade: Blade)(processFun: (Event) => Unit) {
 		val fileName = getDataFileNameForSegment(blade)
-		val inChannel = new RandomAccessFile(fileName, "r").getChannel
-		val buffer = inChannel.map(FileChannel.MapMode.READ_ONLY, 0, inChannel.size)
+		val buffer = new CustomByteBuffer(fileName, PAGE_SIZE)
 		val timer = new Timer
 		var cnt = 0
 
@@ -78,16 +77,14 @@ object BFFUtil {
 		} catch {
 			case e: Exception => //e.printStackTrace
 		} finally {
-			buffer.clear()
-			inChannel.close()
+			buffer.close()
 		}
 		timer.stop("[BFFUtil] Processed " + cnt + " Events")
 	}
 
-	private def readSerializedEventFromBuffer(buffer: ByteBuffer): LazyEvent = {
-		val eSize = buffer.getInt
-		val eventArr = new Array[Byte](eSize)
-		buffer.get(eventArr)
+	private def readSerializedEventFromBuffer(buffer: CustomByteBuffer): LazyEvent = {
+		val eSize = BinaryUtil.bytesToInt(buffer.getBytes(4))
+		val eventArr = buffer.getBytes(eSize)
 		new LazyEvent(eventArr)
 	}
 
