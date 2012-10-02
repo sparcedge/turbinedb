@@ -18,7 +18,7 @@ class Timer {
 	def stop(msg: String, nesting: Int) {
 		val runTime = System.currentTimeMillis - sTime
 		if(Timer.printTimings) {
-			println(("  " * nesting) + msg + ": " + runTime)
+			println(("  " * nesting) + msg + ": " + runTime + " ms")
 		}
 	}
 }

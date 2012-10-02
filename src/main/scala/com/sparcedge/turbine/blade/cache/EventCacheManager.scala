@@ -1,7 +1,8 @@
 package com.sparcedge.turbine.blade.cache
 
 import akka.actor.{Actor,ActorRef}
-import akka.dispatch.Future
+import akka.dispatch.{Await,Future,Promise,ExecutionContext}
+import akka.util.duration._
 import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 import com.sparcedge.turbine.blade.util.Timer
@@ -10,28 +11,43 @@ class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConne
 
 	import context.dispatcher
 
-	var eventCache: EventCache = null
-	// TODO: Handle Queries that may come in before this is ready
+	val eventCacheFuture: Promise[EventCache] = Promise[EventCache]()
+	var updateInProgress = false
+
 	Future {
 		val timer = new Timer
 		timer.start()
-		eventCache = EventCache(blade)
+		eventCacheFuture.complete(Right(EventCache(blade)))
 		timer.stop("[EventCacheManager] Created Cache -- (" + blade + ")")
+		self ! UpdateEventCacheWithNewEventsRequest()
 	}
 
 	def receive = {
-		case EventCacheRequest(query) =>
-			sender ! EventCacheResponse(eventCache)
+		case EventCacheRequest() =>
+			eventCacheFuture onComplete {
+				case Right(eventCache) => sender ! EventCacheResponse(eventCache)
+				case Left(failure) => // TODO Handle Exception
+			}
 		case UpdateEventCacheWithNewEventsRequest() =>
-			Future {
-				eventCache.update()
+			if(!updateInProgress) {
+				updateInProgress = true
+				Future {
+					val timer = new Timer
+					timer.start()
+					await(eventCacheFuture).update()
+					timer.stop("[EventCacheManager] Updated Cache (Blade: " + blade + ")")
+					updateInProgress = false
+				}
 			}
 		case _ =>
 	}
 
+	private def await[T](future: Future[T]): T = {
+		Await.result(future, 120 seconds)
+	}
 }
 
-case class EventCacheRequest(query: TurbineQuery)
+case class EventCacheRequest()
 
 case class EventCacheResponse(eventCache: EventCache)
 

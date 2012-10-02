@@ -2,10 +2,9 @@ package com.sparcedge.turbine.blade.cache
 
 import scala.collection.mutable
 import scala.collection.GenMap
-import scala.collection.immutable.TreeMap
 import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.event.Event
-import com.sparcedge.turbine.blade.util.Timer
+import com.sparcedge.turbine.blade.util.{Timer,WrappedTreeMap}
 
 object QueryResolver {
 
@@ -81,7 +80,7 @@ object QueryResolver {
 
 	/* DISK BASED STREAMING*/
 
-	def matchGroupReduceEventAndUpdateAggregateCalculations(event: Event, matches: Iterable[Match], groupings: Iterable[Grouping], aggregateCalculations: List[(Reducer,mutable.Map[String,ReducedResult])]) {
+	def matchGroupReduceEventAndUpdateAggregateCalculations(event: Event, matches: Iterable[Match], groupings: Iterable[Grouping], aggregateCalculations: List[(Reducer,WrappedTreeMap[String,ReducedResult])]) {
 		if(eventMatchesAllCriteria(event, matches)) {
 			val grpStr = createGroupStringForEvent(event, groupings)
 			aggregateCalculations foreach { case (reducer, resultMap) =>
@@ -91,9 +90,19 @@ object QueryResolver {
 		}
 	}
 
+	def matchGroupReduceEventAndUpdateCachedAggregates(event: Event, cachedAggregates: Iterable[CachedAggregate]) {
+		cachedAggregates.foreach { aggregate =>
+			if(eventMatchesAllCriteria(event, aggregate.matchSet)) {
+				val grpStr = createGroupStringForEvent(event, aggregate.groupSet)
+				val streamingReducer = aggregate.aggregateMap.getOrElseUpdate(grpStr, aggregate.reducer.createReducedResult)
+				streamingReducer(event)
+			}
+		}
+	}
+
 	/* END DISK BASED STREAMING*/
 
-	def removeHourGroupFlattendAndReduceAggregate(aggregate: TreeMap[String,ReducedResult], output: String): TreeMap[String,ReducedResult] = {
+	def removeHourGroupFlattendAndReduceAggregate(aggregate: WrappedTreeMap[String,ReducedResult], output: String): WrappedTreeMap[String,ReducedResult] = {
 		val timer = new Timer()
 		var flattened = mutable.Map[String,List[ReducedResult]]()
 		timer.start()
@@ -104,24 +113,25 @@ object QueryResolver {
 		}
 		timer.stop("Flatten Aggregates", 1)
 		timer.start()
-		val reduced = flattened.mapValues { results => 
+		val reduced = new WrappedTreeMap[String,ReducedResult]()
+		flattened.foreach { case (key, results) => 
 			val result = Reduce.reReduce(results)
 			result.output = Some(output)
-			result
+			reduced(key) = result
 		}
 		timer.stop("Re-reduce Aggregates", 1)
 
-		TreeMap(reduced.toArray:_*)
+		reduced
 	}
 
-	def flattenAggregates(aggregates: Iterable[TreeMap[String,ReducedResult]]): TreeMap[String,Iterable[ReducedResult]] = {
-		var flattened = mutable.Map[String,List[ReducedResult]]()
+	def flattenAggregates(aggregates: Iterable[WrappedTreeMap[String,ReducedResult]]): WrappedTreeMap[String,List[ReducedResult]] = {
+		var flattened = new WrappedTreeMap[String,List[ReducedResult]]()
 		aggregates foreach { aggregate =>
 			aggregate foreach { case (key,value) =>
 				val results = flattened.getOrElseUpdate(key, List[ReducedResult]())
-				flattened += (key -> (value :: results))
+				flattened(key) = (value :: results)
 			}
 		}
-		TreeMap(flattened.toArray:_*)
+		flattened
 	}
 }

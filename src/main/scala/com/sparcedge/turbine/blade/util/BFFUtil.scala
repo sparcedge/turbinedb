@@ -28,12 +28,16 @@ object BFFUtil {
 	}
 
 	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): Long = {
+		serializeAddEventsAndExecute(cursor, blade) { e => /* Empty Block */ }
+	}
+
+	def serializeAddEventsAndExecute(cursor: MongoCursor, blade: Blade, currNewestTimestamp: Long = 0L)(fun: (Event) => Unit): Long = {
 		val timer = new Timer
 		var cnt = 0
 		val fileName = getDataFileNameForSegment(blade)
+		var newestTimestamp = currNewestTimestamp
 		val fos = new FileOutputStream(fileName, true)
 		val bfos = new BufferedOutputStream(fos, 128 * 100)
-		var newestTimestamp = 0L
 		timer.start()
 		cursor foreach { rawEvent =>
 			val its: Long = rawEvent("its") match { 
@@ -45,21 +49,31 @@ object BFFUtil {
 				newestTimestamp = its
 			}
 
-			val eventBytes = BinaryUtil.eventToBytes(ConcreteEvent.fromRawEvent(rawEvent))
+			val event = ConcreteEvent.fromRawEvent(rawEvent)
+			val eventBytes = BinaryUtil.eventToBytes(event)
 			bfos.write(BinaryUtil.intToBytes(eventBytes.size))
 			bfos.write(eventBytes)
-
-			//cnt += 1
-			//if(cnt % 1000 == 0) {
-			//	println("Imported: " + cnt)
-			//}
-		}	
+			fun(event)
+			cnt += 1
+		}
+		updateCacheMetadata(blade, newestTimestamp)
 		timer.stop("[BFFUtil] Serialized " + cnt + " Events to File")
 		newestTimestamp
 	}
 
 	def updateCacheMetadata(blade: Blade, timestamp: Long) {
-		// TODO: Implement Meta Data
+		val fileName = getMetaFileNameForSegment(blade)
+		val file = new RandomAccessFile(fileName, "rw")
+		file.writeLong(timestamp)
+		file.close
+	}
+
+	def readNewestTimestampFromMetadata(blade: Blade): Long = {
+		val fileName = getMetaFileNameForSegment(blade)
+		val file = new RandomAccessFile(fileName, "r")
+		val ts = file.readLong
+		file.close
+		ts
 	}
 
 	def processCachedEvents(blade: Blade)(processFun: (Event) => Unit) {
@@ -100,7 +114,7 @@ object BFFUtil {
 		getDirectoryForSegment(blade) + "/" + blade.period + ".meta"
 	}
 
-	def doesCacheFileExist(blade: Blade): Boolean = {
+	def cacheFileExists(blade: Blade): Boolean = {
 		ensureCacheDirectoryExists(blade)
 		val cacheFile = new File(getDataFileNameForSegment(blade))
 		cacheFile.exists

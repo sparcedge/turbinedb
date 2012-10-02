@@ -21,7 +21,7 @@ class QueryHandler extends Actor {
 
 	def receive = {
 		case HandleQuery(query, eventCacheManager) =>
-			val future = eventCacheManager ? EventCacheRequest(query)
+			val future = eventCacheManager ? EventCacheRequest()
 
 			future onSuccess {
 				case EventCacheResponse(eventCache) =>

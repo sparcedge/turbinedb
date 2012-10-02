@@ -20,14 +20,14 @@ class TurbineBladeManager(mongoConn: MongoDBConnection, preloadBlades: List[Blad
 	var eventCacheManagers = (actorSegmentCacheMap.map(_._2)).toIndexedSeq
 	val next = new AtomicLong(0)
 
-	context.system.scheduler.schedule(
+	context.system.scheduler.schedule (
 		60 seconds,
     	60 seconds,
     	self,
     	UpdateCurrentEventCaches()
     )
 
-	context.system.scheduler.schedule(
+	context.system.scheduler.schedule (
 		30 seconds,
     	30 seconds,
     	self,

@@ -1,13 +1,13 @@
 package com.sparcedge.turbine.blade.cache
 
 import scala.collection.mutable
-import scala.collection.immutable.TreeMap
 import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.cache._
 import com.sparcedge.turbine.blade.event.Event
-import com.sparcedge.turbine.blade.util.{Timer,BFFUtil}
+import com.sparcedge.turbine.blade.util.{Timer,BFFUtil,WrappedTreeMap}
 import akka.dispatch.{Await,Future,Promise,ExecutionContext}
 import akka.util.duration._
+import java.util.SortedMap
 
 //TODO: Update Aggregate Cache Functions
 class AggregateCache(cache: EventCache) {
@@ -15,7 +15,18 @@ class AggregateCache(cache: EventCache) {
 	val aggregateCache = mutable.Map[String, Future[CachedAggregate]]()
 	val aggregateGrouping = Grouping("duration", Some("minute"))
 
-	def calculateQueryResults(query: Query)(implicit ec: ExecutionContext): TreeMap[String,Iterable[ReducedResult]] = {
+	def updateCachedAggregates(event: Event) {
+		//val timer = new Timer
+		//timer.start()
+		updateCachedAggregatesWithEvent(aggregateCache.values.map(await(_)), event)
+		//timer.stop("Updated Aggregate Cache (Blade: " + cache.blade + ")")
+	}
+
+	private def updateCachedAggregatesWithEvent(cachedAggregates: Iterable[CachedAggregate], event: Event) {
+		QueryResolver.matchGroupReduceEventAndUpdateCachedAggregates(event, cachedAggregates)
+	}
+
+	def calculateQueryResults(query: Query)(implicit ec: ExecutionContext): WrappedTreeMap[String,List[ReducedResult]] = {
 		val timer = new Timer
 
 		timer.start()
@@ -70,7 +81,7 @@ class AggregateCache(cache: EventCache) {
 	}
 
 	private def calculateAggregatesAndCompletePromises(query: Query, aggPromises: List[(Reducer,Promise[CachedAggregate])]) {
-		val aggregateCalculations = aggPromises.map((_._1 -> mutable.Map[String,ReducedResult]()))		
+		val aggregateCalculations = aggPromises.map((_._1 -> new WrappedTreeMap[String,ReducedResult]()))		
 		val groupings = aggregateGrouping :: query.groupings
 		val timer = new Timer
 
@@ -88,30 +99,30 @@ class AggregateCache(cache: EventCache) {
 						matchSet = query.matches,
 						groupSet = query.groupings,
 						reducer = reducer,
-						aggregateMap = TreeMap(resultMap.toArray:_*)
+						aggregateMap = resultMap
 					)
 				)
 			)
 		}
 	}
 
-	private def sliceAggregate(query: Query, aggregate: CachedAggregate): TreeMap[String,ReducedResult] = {
+	private def sliceAggregate(query: Query, aggregate: CachedAggregate): WrappedTreeMap[String,ReducedResult] = {
 		val timer = new Timer
-		var sliced = aggregate.aggregateMap
+		var sliced: SortedMap[String,ReducedResult] = aggregate.aggregateMap
 		val lowerBoundBroken = query.range.start > cache.periodStart
 		var upperBoundBroken = query.range.end != None && query.range.end.get < cache.periodEnd
 
 		timer.start()
 		if(lowerBoundBroken) {
-			sliced = sliced.from(query.startPlusMinute)
+			sliced = sliced.tailMap(query.startPlusMinute)
 		}
 		if(upperBoundBroken) {
-			sliced = sliced.to(query.endMinute.get)
+			sliced = sliced.headMap(query.endMinute.get)
 		}
 		timer.stop("Slice Aggregate", 1)
 
-		sliced
+		WrappedTreeMap(sliced)
 	}
 }
 
-case class CachedAggregate(matchSet: Iterable[Match], groupSet: List[Grouping], reducer: Reducer, var aggregateMap: TreeMap[String,ReducedResult])
+case class CachedAggregate(matchSet: Iterable[Match], groupSet: List[Grouping], reducer: Reducer, var aggregateMap: WrappedTreeMap[String,ReducedResult])
