@@ -108,7 +108,7 @@ class AggregateCache(cache: EventCache) {
 
 	private def sliceAggregate(query: Query, aggregate: CachedAggregate): WrappedTreeMap[String,ReducedResult] = {
 		val timer = new Timer
-		var sliced: SortedMap[String,ReducedResult] = aggregate.aggregateMap
+		var sliced: WrappedTreeMap[String,ReducedResult] = aggregate.aggregateMap
 		val lowerBoundBroken = query.range.start > cache.periodStart
 		var upperBoundBroken = query.range.end != None && query.range.end.get < cache.periodEnd
 
@@ -121,7 +121,7 @@ class AggregateCache(cache: EventCache) {
 		}
 		timer.stop("Slice Aggregate", 1)
 
-		WrappedTreeMap(sliced)
+		sliced
 	}
 }
 
