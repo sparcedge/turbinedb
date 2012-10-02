@@ -24,8 +24,10 @@ class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConne
 
 	def receive = {
 		case EventCacheRequest() =>
+			val senderRef = sender
 			eventCacheFuture onComplete {
-				case Right(eventCache) => sender ! EventCacheResponse(eventCache)
+				case Right(eventCache) => 
+					senderRef ! EventCacheResponse(eventCache)
 				case Left(failure) => // TODO Handle Exception
 			}
 		case UpdateEventCacheWithNewEventsRequest() =>

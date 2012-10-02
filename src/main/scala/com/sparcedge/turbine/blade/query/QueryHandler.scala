@@ -5,6 +5,7 @@ import akka.actor.{Actor,ActorRef}
 import akka.dispatch.ExecutionContext
 import akka.util.duration._
 import akka.util.Timeout
+import akka.dispatch.Await
 import akka.pattern.ask
 import com.sparcedge.turbine.blade.cache._
 
@@ -31,7 +32,6 @@ class QueryHandler extends Actor {
 						println(json)
 					} catch {
 						case e: Exception =>
-
 							println("Exception Processing Query ID: " + query.qid + ", Error: " + getStackTrace(e))
 					}
 
