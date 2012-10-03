@@ -10,6 +10,8 @@ object QueryResolver {
 
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
+	val GROUPING = "yyyy-MM-dd-HH"
+	val GROUPING_LENTH = (GROUPING + GROUP_SEPARATOR).size
 
 	/* STREAMING QUERY PROCESSING */
 	def matchGroupReduceEvents(events: Iterable[Event], matches: Iterable[Match], groupings: Iterable[Grouping], reducers: Iterable[Reducer]): GenMap[String,Iterable[ReducedResult]] = {
@@ -107,9 +109,13 @@ object QueryResolver {
 		var flattened = mutable.Map[String,List[ReducedResult]]()
 		timer.start()
 		aggregate foreach { case (key,value) =>
-			val newKey = key.dropWhile(_ != GROUP_SEPARATOR_CHAR).stripPrefix(GROUP_SEPARATOR)
-			val results = flattened.getOrElseUpdate(newKey, List[ReducedResult]())
-			flattened +=  (newKey -> (value :: results))
+			try {
+				val newKey = key.substring(GROUPING_LENTH)
+				val results = flattened.getOrElseUpdate(newKey, List[ReducedResult]())
+				flattened(newKey) = (value :: results)
+			} catch {
+				case ex: StringIndexOutOfBoundsException => // TODO: Handle
+			}
 		}
 		timer.stop("Flatten Aggregates", 1)
 		timer.start()

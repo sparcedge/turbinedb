@@ -13,7 +13,7 @@ import java.util.SortedMap
 class AggregateCache(cache: EventCache) {
 
 	val aggregateCache = mutable.Map[String, Future[CachedAggregate]]()
-	val aggregateGrouping = Grouping("duration", Some("minute"))
+	val aggregateGrouping = Grouping("duration", Some("hour"))
 
 	def updateCachedAggregates(event: Event) {
 		//val timer = new Timer
@@ -77,7 +77,7 @@ class AggregateCache(cache: EventCache) {
 	}
 
 	private def await[T](future: Future[T]): T = {
-		Await.result(future, 120 seconds)
+		Await.result(future, 360 seconds)
 	}
 
 	private def calculateAggregatesAndCompletePromises(query: Query, aggPromises: List[(Reducer,Promise[CachedAggregate])]) {
