@@ -93,7 +93,7 @@ object BFFUtil {
 				cnt += 1
 			}
 		} catch {
-			case e: Exception => e.printStackTrace
+			case e: Exception => //e.printStackTrace
 		} finally {
 			buffer.close()
 		}
