@@ -25,6 +25,8 @@ object BFFUtil {
 			bfos.write(eventBytes)
 			cnt += 1
 		}
+		bfos.flush
+		fos.close
 	}
 
 	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): Long = {
@@ -89,7 +91,7 @@ object BFFUtil {
 				cnt += 1
 			}
 		} catch {
-			case e: Exception => //e.printStackTrace
+			case e: Exception => e.printStackTrace
 		} finally {
 			buffer.close()
 		}
