@@ -25,8 +25,8 @@ object BFFUtil {
 			bfos.write(eventBytes)
 			cnt += 1
 		}
-		bfos.flush
-		fos.close
+		bfos.flush()
+		fos.close()
 	}
 
 	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): Long = {
@@ -58,6 +58,8 @@ object BFFUtil {
 			fun(event)
 			cnt += 1
 		}
+		bfos.flush()
+		bfos.close()
 		updateCacheMetadata(blade, newestTimestamp)
 		timer.stop("[BFFUtil] Serialized " + cnt + " Events to File")
 		newestTimestamp
