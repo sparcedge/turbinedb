@@ -12,6 +12,7 @@ object QueryResolver {
 	val GROUP_SEPARATOR_CHAR = '✈'
 	val GROUPING = "yyyy-MM-dd-HH"
 	val GROUPING_LENGTH = (GROUPING + GROUP_SEPARATOR).size
+	val aggregateGrouping = Grouping("duration", Some("hour"))
 
 	/* STREAMING QUERY PROCESSING */
 	def matchGroupReduceEvents(events: Iterable[Event], matches: Iterable[Match], groupings: Iterable[Grouping], reducers: Iterable[Reducer]): GenMap[String,Iterable[ReducedResult]] = {
@@ -95,10 +96,9 @@ object QueryResolver {
 	def matchGroupReduceEventAndUpdateCachedAggregates(event: Event, cachedAggregates: Iterable[CachedAggregate]) {
 		cachedAggregates.foreach { aggregate =>
 			if(eventMatchesAllCriteria(event, aggregate.matchSet)) {
-				val grpStr = createGroupStringForEvent(event, aggregate.groupSet)
+				val grpStr = createGroupStringForEvent(event, aggregateGrouping :: aggregate.groupSet)
 				val streamingReducer = aggregate.aggregateMap.getOrElseUpdate(grpStr, aggregate.reducer.createReducedResult)
 				streamingReducer(event)
-				println("Segment: " + streamingReducer.segment + ", Reducer: " + streamingReducer.reducer + ", Value: " + streamingReducer.value + ", Count: " + streamingReducer.count)
 			}
 		}
 	}
