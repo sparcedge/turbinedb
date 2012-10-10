@@ -19,6 +19,10 @@ class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
 		treeMap.put(key, value)
 	}
 
+	def contains(key: K): Boolean = {
+		treeMap.containsKey(key)
+	}
+
 	def getOrElseUpdate(key: K, value: V): V = {
 		if(treeMap.containsKey(key)) {
 			treeMap.get(key)

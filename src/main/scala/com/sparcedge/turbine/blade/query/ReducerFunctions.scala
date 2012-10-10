@@ -17,6 +17,12 @@ object ReducerFunctions {
 		new ReducedResult(results.head.segment, "max", None, max, count)
 	}
 
+	def MAX_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+		val max = if (res1.value > res2.value) res1.value else res2.value
+		val count = res1.count + res2.count
+		new ReducedResult(res1.segment, "max", res1.output, max, count)
+	}
+
 	def MAX_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
 		convertNumeric(maybeValue) match {
 			case Some(value) => 
@@ -40,6 +46,12 @@ object ReducerFunctions {
 		new ReducedResult(results.head.segment, "min", None, min, count)	
 	}
 
+	def MIN_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+		val min = if (res1.value < res2.value) res1.value else res2.value
+		val count = res1.count + res2.count
+		new ReducedResult(res1.segment, "min", res1.output, min, count)	
+	}
+
 	def MIN_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
 		convertNumeric(maybeValue) match {
 			case Some(value) => 
@@ -61,6 +73,12 @@ object ReducerFunctions {
 		val sum = results.map(_.value).sum
 		val count = results.map(_.count).sum
 		new ReducedResult(results.head.segment, "sum", None, sum, count)
+	}
+
+	def SUM_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+		val sum = res1.value + res2.value
+		val count = res1.count + res2.count
+		new ReducedResult(res1.segment, "sum", res1.output, sum, count)
 	}
 
 	def SUM_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
@@ -87,6 +105,13 @@ object ReducerFunctions {
 		new ReducedResult(results.head.segment, "avg", None, newValue, totalCount)
 	}
 
+	def AVG_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+		val sum = (res1.value * res1.count) + (res2.value * res2.count)
+		val totalCount = res1.count + res2.count
+		val newValue = if(totalCount > 0) sum / totalCount else 0
+		new ReducedResult(res1.segment, "avg", res1.output, newValue, totalCount)
+	}
+
 	def AVG_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {
 		convertNumeric(maybeValue) match {
 			case Some(value) => 
@@ -107,6 +132,11 @@ object ReducerFunctions {
 	def COUNT_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
 		val count = results.map(_.count).sum
 		new ReducedResult(results.head.segment, "count", None, count, count)
+	}
+
+	def COUNT_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+		val count =  res1.count + res2.count
+		new ReducedResult(res1.segment, "count", res1.output, count, count)
 	}
 
 	def COUNT_STREAMING(prevValue: Double, count: Int, maybeValue: Option[Any]): (Double,Int) = {

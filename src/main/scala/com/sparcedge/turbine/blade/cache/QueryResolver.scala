@@ -11,7 +11,7 @@ object QueryResolver {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
 	val GROUPING = "yyyy-MM-dd-HH"
-	val GROUPING_LENTH = (GROUPING + GROUP_SEPARATOR).size
+	val GROUPING_LENGTH = (GROUPING + GROUP_SEPARATOR).size
 
 	/* STREAMING QUERY PROCESSING */
 	def matchGroupReduceEvents(events: Iterable[Event], matches: Iterable[Match], groupings: Iterable[Grouping], reducers: Iterable[Reducer]): GenMap[String,Iterable[ReducedResult]] = {
@@ -98,6 +98,7 @@ object QueryResolver {
 				val grpStr = createGroupStringForEvent(event, aggregate.groupSet)
 				val streamingReducer = aggregate.aggregateMap.getOrElseUpdate(grpStr, aggregate.reducer.createReducedResult)
 				streamingReducer(event)
+				println("Segment: " + streamingReducer.segment + ", Reducer: " + streamingReducer.reducer + ", Value: " + streamingReducer.value + ", Count: " + streamingReducer.count)
 			}
 		}
 	}
@@ -106,28 +107,23 @@ object QueryResolver {
 
 	def removeHourGroupFlattendAndReduceAggregate(aggregate: WrappedTreeMap[String,ReducedResult], output: String): WrappedTreeMap[String,ReducedResult] = {
 		val timer = new Timer()
-		var flattened = mutable.Map[String,List[ReducedResult]]()
+		var flattenedReduced = new WrappedTreeMap[String,ReducedResult]()
 		timer.start()
 		aggregate foreach { case (key,value) =>
 			try {
-				val newKey = key.substring(GROUPING_LENTH)
-				val results = flattened.getOrElseUpdate(newKey, List[ReducedResult]())
-				flattened(newKey) = (value :: results)
+				val newKey = key.substring(GROUPING_LENGTH)
+				if(flattenedReduced.contains(newKey)) {
+					flattenedReduced(newKey) = flattenedReduced(newKey).reReduce(value)
+				} else {
+					flattenedReduced(newKey) = value.createOutputResult(output)
+				}
 			} catch {
 				case ex: StringIndexOutOfBoundsException => // TODO: Handle
 			}
 		}
-		timer.stop("Flatten Aggregates", 1)
-		timer.start()
-		val reduced = new WrappedTreeMap[String,ReducedResult]()
-		flattened.foreach { case (key, results) => 
-			val result = Reduce.reReduce(results)
-			result.output = Some(output)
-			reduced(key) = result
-		}
-		timer.stop("Re-reduce Aggregates", 1)
+		timer.stop("Flatten / Re-reduce Aggregates", 1)
 
-		reduced
+		flattenedReduced
 	}
 
 	def flattenAggregates(aggregates: Iterable[WrappedTreeMap[String,ReducedResult]]): WrappedTreeMap[String,List[ReducedResult]] = {

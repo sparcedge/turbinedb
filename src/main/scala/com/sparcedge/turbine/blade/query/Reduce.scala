@@ -53,9 +53,25 @@ class ReducedResult (val segment: String, val reducer: String, var output: Optio
 		case "count" => ReducerFunctions.COUNT_STREAMING(_:Double, _:Int, _:Option[Any])
 	}
 
+	val reReduceFunction = reducer match {
+		case "max" => ReducerFunctions.MAX_REREDUCE(this, _:ReducedResult)
+		case "min" => ReducerFunctions.MIN_REREDUCE(this, _:ReducedResult)
+		case "avg" => ReducerFunctions.AVG_REREDUCE(this, _:ReducedResult)
+		case "sum" => ReducerFunctions.SUM_REREDUCE(this, _:ReducedResult)
+		case "count" => ReducerFunctions.COUNT_REREDUCE(this, _:ReducedResult)
+	}
+
 	def apply(event: Event) {
 		val (newValue,newCount) = streamingReduceFunction(value, count, event(segment))
 		value = newValue
 		count = newCount
+	}
+
+	def reReduce(other: ReducedResult): ReducedResult = {
+		reReduceFunction(other)
+	}
+
+	def createOutputResult(out: String): ReducedResult = {
+		new ReducedResult(segment, reducer, Some(out), value, count)
 	}
 }

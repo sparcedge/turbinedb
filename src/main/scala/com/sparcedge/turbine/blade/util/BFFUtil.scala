@@ -59,7 +59,7 @@ object BFFUtil {
 			cnt += 1
 		}
 		bfos.flush()
-		bfos.close()
+		fos.close()
 		updateCacheMetadata(blade, newestTimestamp)
 		timer.stop("[BFFUtil] Serialized " + cnt + " Events to File")
 		newestTimestamp
