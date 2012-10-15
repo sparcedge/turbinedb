@@ -41,22 +41,29 @@ object BFFUtil {
 		val fos = new FileOutputStream(fileName, true)
 		val bfos = new BufferedOutputStream(fos, 128 * 100)
 		timer.start()
-		cursor foreach { rawEvent =>
-			val its: Long = rawEvent("its") match { 
-				case x: java.lang.Long => x
-				case x: java.lang.Double => x.toLong 
-				case _ => 0L
-			}
-			if(its > newestTimestamp) {
-				newestTimestamp = its
-			}
+		try {
+			cursor foreach { rawEvent =>
+				val its: Long = rawEvent("its") match { 
+					case x: java.lang.Long => x
+					case x: java.lang.Double => x.toLong 
+					case _ => 0L
+				}
+				if(its > newestTimestamp) {
+					newestTimestamp = its
+				}
 
-			val event = ConcreteEvent.fromRawEvent(rawEvent)
-			val eventBytes = BinaryUtil.eventToBytes(event)
-			bfos.write(BinaryUtil.intToBytes(eventBytes.size))
-			bfos.write(eventBytes)
-			fun(event)
-			cnt += 1
+				val event = ConcreteEvent.fromRawEvent(rawEvent)
+				val eventBytes = BinaryUtil.eventToBytes(event)
+				bfos.write(BinaryUtil.intToBytes(eventBytes.size))
+				bfos.write(eventBytes)
+				fun(event)
+				cnt += 1
+			}
+		} catch {
+			case e: Exception => {
+				println(blade)
+				e.printStackTrace
+			}
 		}
 		bfos.flush()
 		fos.close()
