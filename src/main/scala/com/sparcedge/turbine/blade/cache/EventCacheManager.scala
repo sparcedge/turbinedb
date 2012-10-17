@@ -15,10 +15,12 @@ class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConne
 	var updateInProgress = false
 
 	Future {
+		updateInProgress = true
 		val timer = new Timer
 		timer.start()
 		eventCacheFuture.complete(Right(EventCache(blade)))
 		timer.stop("[EventCacheManager] Created Cache -- (" + blade + ")")
+		updateInProgress = false
 		self ! UpdateEventCacheWithNewEventsRequest()
 	}
 

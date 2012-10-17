@@ -1,9 +1,9 @@
 package com.sparcedge.turbine.blade.event
 
 import scala.collection.mutable
-import com.sparcedge.turbine.blade.util.BinaryUtil
+import com.sparcedge.turbine.blade.util.{BinaryUtil,EventKeyIndex}
 
-class LazyEvent(bytes: Array[Byte]) extends Event {
+class LazyEvent(bytes: Array[Byte], keyIndex: EventKeyIndex) extends Event {
 
 	lazy val ts = BinaryUtil.bytesToLong(BinaryUtil.slice(bytes, 0, 8))
 	lazy val strValues = createSValueMap(sValueBytes)
@@ -25,9 +25,8 @@ class LazyEvent(bytes: Array[Byte]) extends Event {
 		var cnt = 0
 		var curr = 2
 		while(cnt < size) {
-			val kLength = bytes(curr)
-			val key = getStringValue(bytes, curr+1, kLength) 
-			curr += kLength + 1
+			val key = keyIndex.get(BinaryUtil.bytesToShort(BinaryUtil.slice(bytes, curr, curr+2)))
+			curr += 2
 			val vLength = bytes(curr)
 			val value = getStringValue(bytes, curr+1, vLength)
 			curr += vLength + 1
@@ -45,9 +44,8 @@ class LazyEvent(bytes: Array[Byte]) extends Event {
 		var cnt = 0
 		var curr = 2
 		while(cnt < size) {
-			val kLength = bytes(curr)
-			val key = getStringValue(bytes, curr+1, kLength) 
-			curr += kLength + 1
+			val key = keyIndex.get(BinaryUtil.bytesToShort(BinaryUtil.slice(bytes, curr, curr+2)))
+			curr += 2
 			val value = BinaryUtil.bytesToDouble(BinaryUtil.slice(bytes, curr, curr + 8))
 			curr += 8
 			dValues += (key -> value)

@@ -13,31 +13,16 @@ object BFFUtil {
 	var BASE_PATH = "cache"
 	val PAGE_SIZE = 1024 * 256
 
-	def serializeAndAddEvents(events: List[Event], blade: Blade) {
-		val fileName = getDataFileNameForSegment(blade)
-		val fos = new FileOutputStream(fileName, true)
-		val bfos = new BufferedOutputStream(fos, 128 * 100)
-		val numEvents = events.size
-		var cnt = 0
-		while(cnt < numEvents) {
-			val eventBytes = BinaryUtil.eventToBytes(events(cnt))
-			bfos.write(BinaryUtil.intToBytes(eventBytes.size))
-			bfos.write(eventBytes)
-			cnt += 1
-		}
-		bfos.flush()
-		fos.close()
-	}
-
-	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): Long = {
+	def serializeAndAddEvents(cursor: MongoCursor, blade: Blade): BladeMetaData = {
 		serializeAddEventsAndExecute(cursor, blade) { e => /* Empty Block */ }
 	}
 
-	def serializeAddEventsAndExecute(cursor: MongoCursor, blade: Blade, currNewestTimestamp: Long = 0L)(fun: (Event) => Unit): Long = {
+	def serializeAddEventsAndExecute(cursor: MongoCursor, blade: Blade, bladeMeta: BladeMetaData = new BladeMetaData)(fun: (Event) => Unit): BladeMetaData = {
 		val timer = new Timer
 		var cnt = 0
 		val fileName = getDataFileNameForSegment(blade)
-		var newestTimestamp = currNewestTimestamp
+		var newestTimestamp = bladeMeta.timestamp
+		val keyIndex = bladeMeta.eventKeyIndex
 		val fos = new FileOutputStream(fileName, true)
 		val bfos = new BufferedOutputStream(fos, 128 * 100)
 		timer.start()
@@ -53,7 +38,7 @@ object BFFUtil {
 				}
 
 				val event = ConcreteEvent.fromRawEvent(rawEvent)
-				val eventBytes = BinaryUtil.eventToBytes(event)
+				val eventBytes = BinaryUtil.eventToBytes(event, keyIndex)
 				bfos.write(BinaryUtil.intToBytes(eventBytes.size))
 				bfos.write(eventBytes)
 				fun(event)
@@ -67,27 +52,31 @@ object BFFUtil {
 		}
 		bfos.flush()
 		fos.close()
-		updateCacheMetadata(blade, newestTimestamp)
+		val newBladeMeta = new BladeMetaData(newestTimestamp, keyIndex)
+		updateCacheMetadata(blade, newBladeMeta)
 		timer.stop("[BFFUtil] Serialized " + cnt + " Events to File")
-		newestTimestamp
+		newBladeMeta
 	}
 
-	def updateCacheMetadata(blade: Blade, timestamp: Long) {
+	def updateCacheMetadata(blade: Blade, bladeMeta: BladeMetaData) {
 		val fileName = getMetaFileNameForSegment(blade)
 		val file = new RandomAccessFile(fileName, "rw")
-		file.writeLong(timestamp)
+		val bytes = BinaryUtil.bladeMetaToBytes(bladeMeta)
+		file.write(bytes, 0, bytes.size)
 		file.close
 	}
 
-	def readNewestTimestampFromMetadata(blade: Blade): Long = {
+	def readBladeMetaDataFromDisk(blade: Blade): BladeMetaData = {
 		val fileName = getMetaFileNameForSegment(blade)
 		val file = new RandomAccessFile(fileName, "r")
-		val ts = file.readLong
+		val bytes = new Array[Byte](file.length.toInt)
+		file.read(bytes)
+		val bladeMeta = BinaryUtil.bytesToBladeMeta(bytes)
 		file.close
-		ts
+		bladeMeta
 	}
 
-	def processCachedEvents(blade: Blade)(processFun: (Event) => Unit) {
+	def processCachedEvents(blade: Blade, bladeMeta: BladeMetaData)(processFun: (Event) => Unit) {
 		val fileName = getDataFileNameForSegment(blade)
 		val buffer = new CustomByteBuffer(fileName, PAGE_SIZE)
 		val timer = new Timer
@@ -96,7 +85,7 @@ object BFFUtil {
 		timer.start()
 		try {
 			while (buffer.hasRemaining) {
-				processFun(readSerializedEventFromBuffer(buffer))
+				processFun(readSerializedEventFromBuffer(buffer, bladeMeta))
 				cnt += 1
 			}
 		} catch {
@@ -107,10 +96,10 @@ object BFFUtil {
 		timer.stop("[BFFUtil] Processed " + cnt + " Events")
 	}
 
-	private def readSerializedEventFromBuffer(buffer: CustomByteBuffer): LazyEvent = {
+	private def readSerializedEventFromBuffer(buffer: CustomByteBuffer, bladeMeta: BladeMetaData): LazyEvent = {
 		val eSize = BinaryUtil.bytesToInt(buffer.getBytes(4))
 		val eventArr = buffer.getBytes(eSize)
-		new LazyEvent(eventArr)
+		new LazyEvent(eventArr, bladeMeta.eventKeyIndex)
 	}
 
 	def getDirectoryForSegment(blade: Blade): String = {

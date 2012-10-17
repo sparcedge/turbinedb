@@ -68,35 +68,63 @@ object BinaryUtil {
 		java.lang.Double.longBitsToDouble(bytesToLong(bytes))
 	}
 
-	def eventToBytes(event: Event): Array[Byte] = {
+	def eventToBytes(event: Event, keyIndex: EventKeyIndex): Array[Byte] = {
 		val bytes = mutable.ArrayBuffer[Byte]()
 
-		bytes ++= BinaryUtil.longToBytes(event.ts)
+		bytes ++= longToBytes(event.ts)
 		val strBytes = mutable.ArrayBuffer[Byte]()
 		event.strValues foreach { case (key, value) =>
-			strBytes += key.size.byteValue
-			strBytes ++= key.getBytes
+			val index = keyIndex.getIndexValueAndOptionallyAdd(key)
+			strBytes ++= shortToBytes(index)
 			strBytes += value.size.byteValue
 			strBytes ++= value.getBytes
 		}
-		bytes ++= BinaryUtil.shortToBytes((strBytes.size+2).shortValue)
-		bytes ++= BinaryUtil.shortToBytes(event.strValues.size.shortValue)
+		bytes ++= shortToBytes((strBytes.size+2).shortValue)
+		bytes ++= shortToBytes(event.strValues.size.shortValue)
 		bytes ++= strBytes
 		val dblBytes = mutable.ArrayBuffer[Byte]()
 		event.dblValues foreach { case (key, value) =>
-			dblBytes += key.size.byteValue
-			dblBytes ++= key.getBytes
-			dblBytes ++= BinaryUtil.doubleToBytes(value)
+			val index = keyIndex.getIndexValueAndOptionallyAdd(key)
+			dblBytes ++= shortToBytes(index)
+			dblBytes ++= doubleToBytes(value)
 		}
-		bytes ++= BinaryUtil.shortToBytes((dblBytes.size+2).shortValue)
-		bytes ++= BinaryUtil.shortToBytes(event.dblValues.size.shortValue)
+		bytes ++= shortToBytes((dblBytes.size+2).shortValue)
+		bytes ++= shortToBytes(event.dblValues.size.shortValue)
 		bytes ++= dblBytes
 
 		bytes.toArray
 	}
 
-	def bytesToLazyEvent(bytes: Array[Byte]): LazyEvent = {
-		new LazyEvent(bytes)
+	def bytesToLazyEvent(bytes: Array[Byte], bladeMeta: BladeMetaData): LazyEvent = {
+		new LazyEvent(bytes, bladeMeta.eventKeyIndex)
+	}
+
+	def bladeMetaToBytes(bladeMeta: BladeMetaData): Array[Byte] = {
+		val bytes = mutable.ArrayBuffer[Byte]()
+		bytes ++= longToBytes(bladeMeta.timestamp)
+		bladeMeta.eventKeyIndex.indexMap.foreach { case (key, value) =>
+			bytes ++= shortToBytes(key)
+			bytes ++= shortToBytes(value.size.toShort)
+			bytes ++= value.getBytes
+		}
+		bytes.toArray
+	}
+
+	def bytesToBladeMeta(bytes: Array[Byte]): BladeMetaData = {
+		val timestamp = bytesToLong(slice(bytes, 0,8))
+		val indexMap = mutable.Map[Short, String]()
+		var curr = 8
+		while(curr < bytes.size) {
+			val key = bytesToShort(slice(bytes, curr, curr+2))
+			curr += 2
+			val vLength = bytesToShort(slice(bytes, curr, curr+2))
+			curr +=2
+			val value = getStringValue(bytes, curr, vLength)
+			curr += vLength
+			indexMap(key) = value
+		}
+		val keyIndex = new EventKeyIndex(indexMap)
+		new BladeMetaData(timestamp, keyIndex)
 	}
 
 	def slice(bytes: Array[Byte], start: Int, until: Int): Array[Byte] = {
@@ -123,6 +151,10 @@ object BinaryUtil {
 			cnt += 1
 		}
 		res
+	}
+
+	def getStringValue(bytes: Array[Byte], pos: Int, length: Int): String = {
+		new String(slice(bytes, pos, pos + length))
 	}
 
 }

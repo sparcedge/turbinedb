@@ -86,7 +86,7 @@ class AggregateCache(cache: EventCache) {
 		val timer = new Timer
 
 		timer.start()
-		BFFUtil.processCachedEvents(cache.blade) { event =>
+		BFFUtil.processCachedEvents(cache.blade, cache.bladeMeta) { event =>
 			QueryResolver.matchGroupReduceEventAndUpdateAggregateCalculations(event, query.matches, groupings, aggregateCalculations)
 		}
 		timer.stop("Created all aggregate caches")
