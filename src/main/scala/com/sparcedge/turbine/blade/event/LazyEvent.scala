@@ -5,6 +5,7 @@ import com.sparcedge.turbine.blade.util.{BinaryUtil,EventKeyIndex}
 
 class LazyEvent(bytes: Array[Byte], keyIndex: EventKeyIndex) extends Event {
 
+	val its = 0L
 	lazy val ts = BinaryUtil.bytesToLong(BinaryUtil.slice(bytes, 0, 8))
 	lazy val strValues = createSValueMap(sValueBytes)
 	lazy val dblValues = createDValueMap(dValueBytes)

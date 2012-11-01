@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.blade.util
 
 import java.util.{TreeMap,SortedMap}
+import collection.JavaConversions._
 
 object WrappedTreeMap {
 	def apply[K,V](sortedMap: SortedMap[K,V]): WrappedTreeMap[K,V] = {
@@ -38,6 +39,10 @@ class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
 			val entry = iterator.next
 			fun(entry.getKey -> entry.getValue)
 		}
+	}
+
+	def values(): Iterable[V] = {
+		treeMap.values
 	}
 
 	def headMap(key: K): WrappedTreeMap[K,V] = {

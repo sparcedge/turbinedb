@@ -3,6 +3,7 @@ package com.sparcedge.turbine.blade.event
 import scala.collection.mutable
 
 trait Event {
+	def its: Long
 	def ts: Long
 	def strValues: mutable.Map[String,String]
 	def dblValues: mutable.Map[String,Double]

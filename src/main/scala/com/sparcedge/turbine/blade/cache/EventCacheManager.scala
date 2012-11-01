@@ -21,7 +21,7 @@ class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConne
 		eventCacheFuture.complete(Right(EventCache(blade)))
 		timer.stop("[EventCacheManager] Created Cache -- (" + blade + ")")
 		updateInProgress = false
-		self ! UpdateEventCacheWithNewEventsRequest()
+		updateEventCacheIfNotInProgress()
 	}
 
 	def receive = {
@@ -33,17 +33,21 @@ class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConne
 				case Left(failure) => // TODO Handle Exception
 			}
 		case UpdateEventCacheWithNewEventsRequest() =>
-			if(!updateInProgress) {
-				updateInProgress = true
-				Future {
-					val timer = new Timer
-					timer.start()
-					await(eventCacheFuture).update()
-					timer.stop("[EventCacheManager] Updated Cache (Blade: " + blade + ")")
-					updateInProgress = false
-				}
-			}
+			updateEventCacheIfNotInProgress()
 		case _ =>
+	}
+
+	private def updateEventCacheIfNotInProgress() {
+		if(!updateInProgress) {
+			updateInProgress = true
+			Future {
+				val timer = new Timer
+				timer.start()
+				await(eventCacheFuture).update()
+				timer.stop("[EventCacheManager] Updated Cache (Blade: " + blade + ")")
+				updateInProgress = false
+			}
+		}
 	}
 
 	private def await[T](future: Future[T]): T = {

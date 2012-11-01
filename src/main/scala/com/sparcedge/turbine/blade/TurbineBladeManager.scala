@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicLong
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 import com.sparcedge.turbine.blade.query.{TurbineQuery,QueryHandler,HandleQuery,Blade}
 import com.sparcedge.turbine.blade.cache.{EventCacheManager,UpdateEventCacheWithNewEventsRequest}
-import com.sparcedge.turbine.blade.util.{BFFUtil,Timer}
+import com.sparcedge.turbine.blade.util.{DiskUtil,Timer}
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -60,7 +60,7 @@ class TurbineBladeManager(mongoConn: MongoDBConnection, preloadBlades: List[Blad
 	def discoverExistingBladesAndInitializeNewBlades(blades: List[Blade]): mutable.Map[String,ActorRef] = {
 		val timer = new Timer
 		timer.start()
-		val existingBlades = BFFUtil.retrieveBladesFromExistingData()
+		val existingBlades = DiskUtil.retrieveBladesFromExistingData()
 		timer.stop("[TurbineBladeManager] Discovered existing blades (" + existingBlades.size + ")")
 		timer.start()
 		val allBlades = (blades ++ existingBlades).toSet

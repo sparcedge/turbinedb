@@ -5,26 +5,14 @@ import com.mongodb.casbah.query.Imports._
 import com.mongodb.casbah.MongoCursor
 import akka.dispatch.ExecutionContext
 import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.util.{BFFUtil,Timer,WrappedTreeMap,BladeMetaData}
+import com.sparcedge.turbine.blade.util.{Timer,WrappedTreeMap,BladeMetaData}
 import org.joda.time.format.DateTimeFormat
 
 object EventCache {
 
 	def apply(blade: Blade)(implicit mongoConnection: MongoDBConnection): EventCache = {
-		if(BFFUtil.cacheFileExists(blade)) {
-			val bladeMeta = BFFUtil.readBladeMetaDataFromDisk(blade)
-			new EventCache(blade, bladeMeta)
-		} else {
-			val cursor = createCursor(blade, None)
-			var bladeMeta = new BladeMetaData()
-			try {
-				BFFUtil.ensureCacheFileExists(blade)
-				bladeMeta = BFFUtil.serializeAndAddEvents(cursor, blade)
-			} finally {
-				cursor.close()
-			}
-			new EventCache(blade, bladeMeta)
-		}
+		val diskCache = new DiskCache(blade)
+		new EventCache(blade, diskCache)
 	}
 
 	def createCursor(blade: Blade, itsOpt: Option[Long])(implicit mongoConnection: MongoDBConnection): MongoCursor = {
@@ -42,7 +30,7 @@ object EventCache {
 	}
 }
 
-class EventCache(val blade: Blade, var bladeMeta: BladeMetaData) {
+class EventCache(val blade: Blade, val diskCache: DiskCache) {
 	val periodStart = blade.periodStart.getMillis
 	val periodEnd = blade.periodEnd.getMillis
 	val aggregateCache = new AggregateCache(this)
@@ -67,8 +55,8 @@ class EventCache(val blade: Blade, var bladeMeta: BladeMetaData) {
 	}
 
 	def update()(implicit mongoConnection: MongoDBConnection) {
-		val cursor = EventCache.createCursor(blade, Some(bladeMeta.timestamp))
-		bladeMeta = BFFUtil.serializeAddEventsAndExecute(cursor, blade, bladeMeta) { event =>
+		val cursor = EventCache.createCursor(blade, Some(diskCache.metaData.timestamp))
+		diskCache.addEventsAndExecute(cursor) { event =>
 			aggregateCache.updateCachedAggregates(event)
 		}
 	}

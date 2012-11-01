@@ -4,6 +4,12 @@ import org.joda.time.format.DateTimeFormat
 import com.sparcedge.turbine.blade.event.Event
 
 case class Grouping (`type`: String, value: Option[String]) {
+	val segment: Option[String] = `type` match {
+		case "duration" => None
+		case "resource" => Some("resource")
+		case "segment" => Some(value.get)
+	}
+
 	def createGroupFunction(): (Event) => Any = {
 		`type` match {
 			case "duration" =>

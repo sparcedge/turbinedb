@@ -23,13 +23,18 @@ object ConcreteEvent {
 			}
 		}
 
-		val ts: Long = rawEvent("ts") match { 
-			case x: java.lang.Long => x
-			case x: java.lang.Double => x.toLong 
-		}
+		val ts = convertTimestamp(rawEvent("ts"))
+		val its = convertTimestamp(rawEvent("its"))
 
-		new ConcreteEvent(ts, sValues, dValues)
+		new ConcreteEvent(its, ts, sValues, dValues)
+	}
+
+	def convertTimestamp(obj: Any): Long = {
+		obj match {
+			case x: java.lang.Long => x
+			case x: java.lang.Double => x.toLong
+		}
 	}
 }
 
-class ConcreteEvent(val ts: Long, val strValues: mutable.Map[String,String], val dblValues: mutable.Map[String,Double]) extends Event
+class ConcreteEvent(val its: Long, val ts: Long, val strValues: mutable.Map[String,String], val dblValues: mutable.Map[String,Double]) extends Event

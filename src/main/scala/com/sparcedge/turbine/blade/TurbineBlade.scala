@@ -3,7 +3,7 @@ package com.sparcedge.turbine.blade
 import akka.actor.{ActorSystem,Actor,Props}
 import com.sparcedge.turbine.blade.config.BladeConfig
 import com.sparcedge.turbine.blade.mongo.MongoDBConnection
-import com.sparcedge.turbine.blade.util.{Timer,BFFUtil}
+import com.sparcedge.turbine.blade.util.{Timer,DiskUtil}
 import com.sparcedge.turbine.blade.query.Blade
 
 object TurbineBlade extends App {
@@ -22,7 +22,7 @@ object TurbineBlade extends App {
 	val bladeManager = actorSystem.actorOf(Props(new TurbineBladeManager(mongoConnection, preloadBlades)), name = "BladeManager")
 
 	Timer.printTimings = printTimings
-	BFFUtil.BASE_PATH = dataDirectory
+	DiskUtil.BASE_PATH = dataDirectory
 
 	println("{\"status\": \"running\"}")
 

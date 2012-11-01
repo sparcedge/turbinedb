@@ -4,7 +4,7 @@ import scala.collection.mutable
 import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.cache._
 import com.sparcedge.turbine.blade.event.Event
-import com.sparcedge.turbine.blade.util.{Timer,BFFUtil,WrappedTreeMap}
+import com.sparcedge.turbine.blade.util.{Timer,DiskUtil,WrappedTreeMap}
 import akka.dispatch.{Await,Future,Promise,ExecutionContext}
 import akka.util.duration._
 import java.util.SortedMap
@@ -86,7 +86,9 @@ class AggregateCache(cache: EventCache) {
 		val timer = new Timer
 
 		timer.start()
-		BFFUtil.processCachedEvents(cache.blade, cache.bladeMeta) { event =>
+		val reqSegments = retrieveRequiredSegments(query.matches, groupings)
+		val optSegments = aggregateCalculations.map(_._1.segment)
+		cache.diskCache.processEvents(reqSegments, optSegments) { event =>
 			QueryResolver.matchGroupReduceEventAndUpdateAggregateCalculations(event, query.matches, groupings, aggregateCalculations)
 		}
 		timer.stop("Created all aggregate caches")
@@ -104,6 +106,10 @@ class AggregateCache(cache: EventCache) {
 				)
 			)
 		}
+	}
+
+	def retrieveRequiredSegments(matches: Iterable[Match], groupings: Iterable[Grouping]): Iterable[String] = {
+		matches.map(_.segment) ++ groupings.flatMap(_.segment)
 	}
 
 	private def sliceAggregate(query: Query, aggregate: CachedAggregate): WrappedTreeMap[String,ReducedResult] = {
