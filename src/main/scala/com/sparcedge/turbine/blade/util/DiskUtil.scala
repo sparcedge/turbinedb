@@ -93,11 +93,10 @@ object DiskUtil {
 		}
 	}
 
-	// TODO: Disambiguate -data
 	def retrieveBladesFromExistingData(): Iterable[Blade] = {
 		val cacheDir = new File(BASE_PATH)
 		val cacheFilesAndDirs = recursiveListFilesAndDirs(cacheDir)
-		val cacheFiles = cacheFilesAndDirs.filter(_.getName.contains("0-data"))
+		val cacheFiles = cacheFilesAndDirs.filter(_.getName.matches("""\d{4}-\d{2}-data"""))
 		cacheFiles.map(convertCacheFileToBlade(_))
 	}
 
