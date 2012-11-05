@@ -92,7 +92,7 @@ object DiskUtil {
 			0
 		}
 	}
-
+=
 	def retrieveBladesFromExistingData(): Iterable[Blade] = {
 		val cacheDir = new File(BASE_PATH)
 		val cacheFilesAndDirs = recursiveListFilesAndDirs(cacheDir)
@@ -102,7 +102,6 @@ object DiskUtil {
 
 	def convertCacheFileToBlade(cacheFile: File): Blade = {
 		val path = cacheFile.getAbsolutePath
-		println(path)
 		val tokens = path.substring(path.indexOf(BASE_PATH) + BASE_PATH.size).split("/")
 		new Blade(tokens(1), tokens(2), tokens(3), tokens(4).substring(0,tokens(4).indexOf("-data")))
 	}
