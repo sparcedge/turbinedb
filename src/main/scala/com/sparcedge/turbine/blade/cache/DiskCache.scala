@@ -132,7 +132,7 @@ class DiskCache(val blade: Blade) {
 				cnt += 1
 			}
 		} catch {
-			case e: Exception => e.printStackTrace
+			case e: Exception => // e.printStackTrace
 		} finally {
 			segmentBufferMap.values.foreach(_.close())
 		}
