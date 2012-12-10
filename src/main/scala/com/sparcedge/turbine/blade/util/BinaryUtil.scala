@@ -137,6 +137,18 @@ object BinaryUtil {
 		res
 	}
 
+	def transfer(from: Array[Byte], to: Array[Byte], startFrom: Int, startTo: Int, count: Int) = {
+		var cnt = 0
+		var currFrom = startFrom
+		var currTo = startTo
+		while(cnt < count) {
+			from(currFrom) = to(currTo)
+			currFrom += 1
+			currTo += 1
+			cnt += 1
+		}
+	}
+
 	def join(arr1: Array[Byte], arr2: Array[Byte]): Array[Byte] = {
 		val res = new Array[Byte](arr1.length + arr2.length)
 		var cnt = 0

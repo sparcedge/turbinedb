@@ -16,10 +16,7 @@ class AggregateCache(cache: EventCache) {
 	val aggregateGrouping = Grouping("duration", Some("hour"))
 
 	def updateCachedAggregates(event: Event) {
-		//val timer = new Timer
-		//timer.start()
 		updateCachedAggregatesWithEvent(aggregateCache.values.map(await(_)), event)
-		//timer.stop("Updated Aggregate Cache (Blade: " + cache.blade + ")")
 	}
 
 	private def updateCachedAggregatesWithEvent(cachedAggregates: Iterable[CachedAggregate], event: Event) {

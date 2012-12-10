@@ -55,9 +55,9 @@ class EventCache(val blade: Blade, val diskCache: DiskCache) {
 	}
 
 	def update()(implicit mongoConnection: MongoDBConnection) {
-		val cursor = EventCache.createCursor(blade, Some(diskCache.metaData.timestamp))
-		diskCache.addEventsAndExecute(cursor) { event =>
-			aggregateCache.updateCachedAggregates(event)
-		}
+		//val cursor = EventCache.createCursor(blade, Some(diskCache.timestamp))
+		//diskCache.addEventsAndExecute(cursor) { event =>
+		//	aggregateCache.updateCachedAggregates(event)
+		//}
 	}
 }

@@ -12,12 +12,12 @@ import com.sparcedge.turbine.blade.query.Blade
 class DiskCache(val blade: Blade) {
 
 	DiskUtil.ensureCacheDirectoryExists(blade)
-	DiskUtil.ensureMetaFileExists(blade)
 
 	val cacheDir = DiskUtil.getDirectoryForBlade(blade)
-	var metaData = DiskUtil.readBladeMetaFromDisk(blade)
 	var cacheSegments = DiskUtil.retrieveAllExistingSegments(blade).toList
 	var eventCount = DiskUtil.retrieveExistingEventCount(blade)
+	var newestTimestamp = DiskUtil.retrieveLatestInternalTimestamp(blade)
+	val lngArr = new Array[Byte](8)
 
 	def addEvents(cursor: MongoCursor) {
 		addEventsAndExecute(cursor) { e => /* Empty Block */ }
@@ -26,7 +26,6 @@ class DiskCache(val blade: Blade) {
 	// TODO: Potentially remove ConcreteEvent from equation (Less Overhead)
 	def addEventsAndExecute(cursor: MongoCursor)(fun: (Event) => Unit) {
 		val timer = new Timer
-		var newestTimestamp = metaData.timestamp
 		var segmentOutStreamMap = createSegmentOutputStreamMap(cacheSegments)
 		val startCount = eventCount
 		timer.start()
@@ -52,9 +51,6 @@ class DiskCache(val blade: Blade) {
 			segmentOutStreamMap.values.foreach { outStream => outStream.flush(); outStream.close() }
 		}
 		timer.stop("Wrote " + (eventCount - startCount) + " Events to Cache (" + blade + ")")
-
-		metaData = new BladeMetaData(newestTimestamp)
-		DiskUtil.updateCacheMetadata(blade, metaData)
 	}
 
 	def addNewSegments(event: Event, segmentOutStreamMap: Map[String,BufferedOutputStream]): Map[String,BufferedOutputStream] = {
@@ -132,7 +128,7 @@ class DiskCache(val blade: Blade) {
 				cnt += 1
 			}
 		} catch {
-			case e: Exception => // e.printStackTrace
+			case e: Exception => e.printStackTrace
 		} finally {
 			segmentBufferMap.values.foreach(_.close())
 		}
@@ -147,7 +143,8 @@ class DiskCache(val blade: Blade) {
 
 		bufferMap.foreach { case (segment, buffer) =>
 			if(segment == "ts") {
-				timestamp = BinaryUtil.bytesToLong(bufferMap("ts").getBytes(8))
+				bufferMap("ts").readBytes(lngArr, 8)
+				timestamp = BinaryUtil.bytesToLong(lngArr)
 			} else {
 				readSegmentToCorrectMap(segment, buffer, strValues, dblValues)
 			}
@@ -156,15 +153,15 @@ class DiskCache(val blade: Blade) {
 		new ConcreteEvent(0L, timestamp, strValues, dblValues)
 	}
 
-	// TODO: Add direct read single byte to custom buffer
 	def readSegmentToCorrectMap(segment: String, buffer: CustomByteBuffer, strValues: mutable.Map[String,String], dblValues: mutable.Map[String,Double]) {
-		val byte = buffer.getBytes(1)(0)
+		val byte = buffer.readByte
 		if(byte == 0) {
 			// Skip -- segment does not exist for event
 		} else if(byte == 1) {
-			dblValues += (segment -> BinaryUtil.bytesToDouble(buffer.getBytes(8)))
+			buffer.readBytes(lngArr,8)
+			dblValues += (segment -> BinaryUtil.bytesToDouble(lngArr))
 		} else if(byte == 2) {
-			val len = buffer.getBytes(1)(0)
+			val len = buffer.readByte
 			strValues += (segment -> new String(buffer.getBytes(len)))
 		} else {
 			// Unrecognized Byte! - Probably bad!
