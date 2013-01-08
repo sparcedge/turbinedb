@@ -2,10 +2,10 @@ package com.sparcedge.turbine.blade.query
 
 import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
-import akka.dispatch.ExecutionContext
-import akka.util.duration._
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import akka.util.Timeout
-import akka.dispatch.Await
+import scala.concurrent.Await
 import akka.pattern.ask
 import com.sparcedge.turbine.blade.cache._
 

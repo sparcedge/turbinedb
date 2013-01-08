@@ -5,8 +5,8 @@ import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.cache._
 import com.sparcedge.turbine.blade.event.Event
 import com.sparcedge.turbine.blade.util.{Timer,DiskUtil,WrappedTreeMap}
-import akka.dispatch.{Await,Future,Promise,ExecutionContext}
-import akka.util.duration._
+import scala.concurrent.{Await,Future,Promise,ExecutionContext}
+import scala.concurrent.duration._
 import java.util.SortedMap
 
 //TODO: Update Aggregate Cache Functions
@@ -61,7 +61,7 @@ class AggregateCache(cache: EventCache) {
 			val futureAggregate = aggregateCache.getOrElseUpdate(aggregateCacheString, {
 				val aggPromise = Promise[CachedAggregate]()
 				aggPromises = (reducer -> aggPromise) :: aggPromises
-				aggPromise
+				aggPromise.future
 			})
 			aggFutureMap =  aggFutureMap + (reducer.propertyName -> futureAggregate)
 		}
@@ -92,14 +92,12 @@ class AggregateCache(cache: EventCache) {
 
 		aggregateCalculations foreach { case (reducer, resultMap) =>
 			val promise = aggPromises.find(_._1 == reducer).get._2
-			promise.complete (
-				Right (
-					new CachedAggregate (
-						matchSet = query.matches,
-						groupSet = query.groupings,
-						reducer = reducer,
-						aggregateMap = resultMap
-					)
+			promise.success (
+				new CachedAggregate (
+					matchSet = query.matches,
+					groupSet = query.groupings,
+					reducer = reducer,
+					aggregateMap = resultMap
 				)
 			)
 		}

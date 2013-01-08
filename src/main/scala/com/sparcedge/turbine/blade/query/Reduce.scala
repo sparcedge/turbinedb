@@ -1,8 +1,7 @@
 package com.sparcedge.turbine.blade.query
 
-import net.liftweb.json._
-import com.mongodb.casbah.query.Imports._
 import com.sparcedge.turbine.blade.event.Event
+import org.json4s.JsonAST._
 
 object Reduce {
 	def reReduce(results: Iterable[ReducedResult]): ReducedResult = {
@@ -18,7 +17,8 @@ object Reduce {
 
 class Reduce (reducers: Option[List[Reducer]], filter: Option[Map[String,JObject]]) {
 
-	implicit val formats = Serialization.formats(NoTypeHints)
+	implicit val formats = org.json4s.DefaultFormats
+
 	val filters = filter.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
 		new Match(segment, value.extract[Map[String,JValue]])
 	}

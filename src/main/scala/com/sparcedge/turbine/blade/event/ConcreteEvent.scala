@@ -1,34 +1,8 @@
 package com.sparcedge.turbine.blade.event
 
 import scala.collection.mutable
-import com.mongodb.casbah.query.Imports._
 
 object ConcreteEvent {
-	def fromRawEvent(rawEvent: DBObject): ConcreteEvent = {
-		val resource = rawEvent("r").toString
-		val dataList = rawEvent("dat").asInstanceOf[DBObject].toList.+:("resource" -> resource)
-		val sValues = mutable.Map[String,String]()
-		val dValues = mutable.Map[String,Double]()
-
-		dataList.foreach { case (key,value) =>
-			if(!key.endsWith("-kWh") && !key.endsWith("-amps") && !key.endsWith("-apf")) {
-				value match {
-					case x: java.lang.Long => dValues(key) = x.toDouble
-					case x: java.lang.Integer => dValues(key) = x.toDouble
-					case x: java.lang.Double => dValues(key) = x
-					case x: String => sValues(key) = x
-					case null => // Don't add to event
-					case x => // TODO: Handle Exception Unknown Type
-				}
-			}
-		}
-
-		val ts = convertTimestamp(rawEvent("ts"))
-		val its = convertTimestamp(rawEvent("its"))
-
-		new ConcreteEvent(its, ts, sValues, dValues)
-	}
-
 	def convertTimestamp(obj: Any): Long = {
 		obj match {
 			case x: java.lang.Long => x

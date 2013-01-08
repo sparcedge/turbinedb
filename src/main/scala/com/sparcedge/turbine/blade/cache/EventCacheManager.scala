@@ -1,54 +1,38 @@
 package com.sparcedge.turbine.blade.cache
 
 import akka.actor.{Actor,ActorRef}
-import akka.dispatch.{Await,Future,Promise,ExecutionContext}
-import akka.util.duration._
+import scala.util.{Try, Success, Failure}
+import scala.concurrent.{Await,Future,Promise,ExecutionContext}
+import scala.concurrent.duration._
 import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 import com.sparcedge.turbine.blade.util.Timer
 
-class EventCacheManager(blade: Blade)(implicit val mongoConnection: MongoDBConnection) extends Actor {
+class EventCacheManager(blade: Blade) extends Actor {
 
 	import context.dispatcher
 
-	val eventCacheFuture: Promise[EventCache] = Promise[EventCache]()
-	var updateInProgress = false
+	val eventCachePromise = Promise[EventCache]() 
+	val eventCacheFuture = eventCachePromise.future
 
 	Future {
-		updateInProgress = true
 		val timer = new Timer
 		timer.start()
 		val eventCache = EventCache(blade)
-		eventCache.update()
-		eventCacheFuture.complete(Right(eventCache))
+		eventCachePromise.success(eventCache)
 		timer.stop("[EventCacheManager] Created Cache -- (" + blade + ")")
-		updateInProgress = false
 	}
 
 	def receive = {
 		case EventCacheRequest() =>
 			val senderRef = sender
 			eventCacheFuture onComplete {
-				case Right(eventCache) => 
+				case Success(eventCache) => 
 					senderRef ! EventCacheResponse(eventCache)
-				case Left(failure) => // TODO Handle Exception
+				case Failure(error) => // TODO Handle Exception
 			}
 		case UpdateEventCacheWithNewEventsRequest() =>
-			updateEventCacheIfNotInProgress()
+			// TODO: Remove all update logic
 		case _ =>
-	}
-
-	private def updateEventCacheIfNotInProgress() {
-		if(!updateInProgress) {
-			updateInProgress = true
-			Future {
-				val timer = new Timer
-				timer.start()
-				await(eventCacheFuture).update()
-				timer.stop("[EventCacheManager] Updated Cache (Blade: " + blade + ")")
-				updateInProgress = false
-			}
-		}
 	}
 
 	private def await[T](future: Future[T]): T = {

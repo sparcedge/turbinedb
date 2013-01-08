@@ -1,17 +1,18 @@
 package com.sparcedge.turbine.blade.query
 
 import scala.collection.immutable.TreeMap
-import net.liftweb.json._
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 object TurbineQuery {
 
-	implicit val formats = Serialization.formats(NoTypeHints)
+	implicit val formats = org.json4s.DefaultFormats
 
 	def apply(queryStr: String): TurbineQuery = {
-		val jsonObj = parse(queryStr)
-		jsonObj.extract[TurbineQuery]
+		val json = parse(queryStr)
+		json.extract[TurbineQuery]
 	}
 }
 
@@ -24,6 +25,7 @@ case class Query (
 	group: Option[List[Grouping]],
 	reduce: Option[Reduce]
 ) {
+	implicit val formats = org.json4s.DefaultFormats
 	val minuteFormatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
 	val startMinute = minuteFormatter.print(new DateTime(range.start))
 	val startPlusMinute = minuteFormatter.print(new DateTime(range.start).plusMinutes(1))
@@ -44,7 +46,6 @@ case class Query (
 		reqFields
 	}
 
-	implicit val formats = Serialization.formats(NoTypeHints)
 	val matches = `match`.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
 		new Match(segment, value.extract[Map[String,JValue]])
 	}

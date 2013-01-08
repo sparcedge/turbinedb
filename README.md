@@ -1,7 +1,7 @@
-Turbine Blade
+Turbine DB
 =============
 
-Scala code base for the turbine blade, which is a standalone binary that caches and handles queries submitted via standard in.
+Scala code base for the turbine database, which is a low latency time series database.
 
 Prerequisites
 ------------
@@ -20,16 +20,11 @@ Generate Eclipse Project
 
 	$ sbt eclipse
 
-Generate IntelliJ Idea Project
-
-	$ sbt idea
-
 Compile
 
 	$ sbt compile
 	
-Test
-	
+Test	
 	$ sbt test
 
 Package (Create Jar)

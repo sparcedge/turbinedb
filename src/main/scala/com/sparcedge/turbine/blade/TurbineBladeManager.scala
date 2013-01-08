@@ -2,19 +2,19 @@ package com.sparcedge.turbine.blade
 
 import akka.actor.{Actor,Props,ActorSystem,ActorRef}
 import akka.routing.RoundRobinRouter
-import akka.util.duration._
+import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicLong
-import com.sparcedge.turbine.blade.mongo.MongoDBConnection
 import com.sparcedge.turbine.blade.query.{TurbineQuery,QueryHandler,HandleQuery,Blade}
 import com.sparcedge.turbine.blade.cache.{EventCacheManager,UpdateEventCacheWithNewEventsRequest}
 import com.sparcedge.turbine.blade.util.{DiskUtil,Timer}
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+// TODO: Use akka dispatcher instead of global
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class TurbineBladeManager(mongoConn: MongoDBConnection, preloadBlades: List[Blade]) extends Actor {
-	
-	implicit val mongoConnection = mongoConn
+class TurbineBladeManager(preloadBlades: List[Blade]) extends Actor {
+
 	val actorSegmentCacheMap = discoverExistingBladesAndInitializeNewBlades(preloadBlades)
 	val queryHandlerRouter = context.actorOf(Props[QueryHandler].withRouter(RoundRobinRouter(50)), "QueryHandlerRouter")
 	var eventCacheManagers = (actorSegmentCacheMap.map(_._2)).toIndexedSeq

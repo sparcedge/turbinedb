@@ -2,8 +2,6 @@ package com.sparcedge.turbine.blade.cache
 
 import java.io._
 import scala.collection.mutable
-import com.mongodb.casbah.query.Imports._
-import com.mongodb.casbah.MongoCursor
 
 import com.sparcedge.turbine.blade.event.{Event,LazyEvent,ConcreteEvent}
 import com.sparcedge.turbine.blade.util._
@@ -18,40 +16,6 @@ class DiskCache(val blade: Blade) {
 	var eventCount = DiskUtil.retrieveExistingEventCount(blade)
 	var newestTimestamp = DiskUtil.retrieveLatestInternalTimestamp(blade)
 	val lngArr = new Array[Byte](8)
-
-	def addEvents(cursor: MongoCursor) {
-		addEventsAndExecute(cursor) { e => /* Empty Block */ }
-	}
-
-	// TODO: Potentially remove ConcreteEvent from equation (Less Overhead)
-	def addEventsAndExecute(cursor: MongoCursor)(fun: (Event) => Unit) {
-		val timer = new Timer
-		var segmentOutStreamMap = createSegmentOutputStreamMap(cacheSegments)
-		val startCount = eventCount
-		timer.start()
-		try {
-			cursor foreach { rawEvent =>
-				val event = ConcreteEvent.fromRawEvent(rawEvent)
-				if(!cacheContainsAllSegmentsForEvent(event)) {
-					segmentOutStreamMap = addNewSegments(event, segmentOutStreamMap)
-				}
-				if(event.its > newestTimestamp) {
-					newestTimestamp = event.its
-				}
-				writeEventToSegmentFiles(event, segmentOutStreamMap)
-				fun(event)
-				eventCount += 1
-				if(eventCount % 100 == 0) {
-					println("Events Imported: " + eventCount)
-				}
-			}
-		} catch {
-			case e: Exception => e.printStackTrace
-		} finally {
-			segmentOutStreamMap.values.foreach { outStream => outStream.flush(); outStream.close() }
-		}
-		timer.stop("Wrote " + (eventCount - startCount) + " Events to Cache (" + blade + ")")
-	}
 
 	def addNewSegments(event: Event, segmentOutStreamMap: Map[String,BufferedOutputStream]): Map[String,BufferedOutputStream] = {
 		var newMap = segmentOutStreamMap

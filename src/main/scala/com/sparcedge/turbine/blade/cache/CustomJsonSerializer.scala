@@ -1,12 +1,10 @@
 package com.sparcedge.turbine.blade.cache
 
 import scala.collection.GenMap
-import net.liftweb.json._
 import com.sparcedge.turbine.blade.query._
 import com.sparcedge.turbine.blade.util.WrappedTreeMap
 
 object CustomJsonSerializer {
-	implicit val formats = Serialization.formats(NoTypeHints)
 
 	def serializeAggregateGroupMap(aggregateMap: WrappedTreeMap[String,List[ReducedResult]]): String = {		
 		serializeGroupMap(aggregateMap, serializeReducedResults, serializeReducedResultsMeta)
