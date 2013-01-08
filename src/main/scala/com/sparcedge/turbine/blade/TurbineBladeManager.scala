@@ -10,6 +10,7 @@ import com.sparcedge.turbine.blade.util.{DiskUtil,Timer}
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import spray.routing.RequestContext
 // TODO: Use akka dispatcher instead of global
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -35,7 +36,7 @@ class TurbineBladeManager(preloadBlades: List[Blade]) extends Actor {
     )
 
 	def receive = {
-		case QueryDispatchRequest(rawQuery) =>
+		case QueryDispatchRequest(rawQuery, ctx) =>
 			val query = TurbineQuery(rawQuery)
 			val cacheKey = query.blade.segmentCacheString
 			val cacheManager = actorSegmentCacheMap.getOrElseUpdate(cacheKey, {
@@ -43,7 +44,7 @@ class TurbineBladeManager(preloadBlades: List[Blade]) extends Actor {
 				eventCacheManagers = eventCacheManagers :+ man
 				man
 			})
-			queryHandlerRouter ! HandleQuery(query, cacheManager)
+			queryHandlerRouter ! HandleQuery(query, cacheManager, ctx)
 		case UpdateCurrentEventCaches() =>
 			val dateSegment = new DateTime().toString("yyyy-MM")
 			actorSegmentCacheMap.filter(_._1.endsWith(dateSegment)).foreach { case (segment, cacheManager) =>
@@ -74,6 +75,6 @@ class TurbineBladeManager(preloadBlades: List[Blade]) extends Actor {
 	}
 }
 
-case class QueryDispatchRequest(rawQuery: String)
+case class QueryDispatchRequest(rawQuery: String, ctx: RequestContext)
 case class UpdateCurrentEventCaches()
 case class UpdateOneHistoricalCache()

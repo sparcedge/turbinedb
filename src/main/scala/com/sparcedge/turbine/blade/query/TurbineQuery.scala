@@ -16,7 +16,7 @@ object TurbineQuery {
 	}
 }
 
-case class TurbineQuery(blade: Blade, query: Query, qid: String)
+case class TurbineQuery(blade: Blade, query: Query)
 
 case class Query (
 	category: String,
