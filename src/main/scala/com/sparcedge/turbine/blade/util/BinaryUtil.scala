@@ -1,21 +1,20 @@
 package com.sparcedge.turbine.blade.util
 
 import scala.collection.mutable
-import com.sparcedge.turbine.blade.event.{Event,LazyEvent}
 
 /*
 	All operations assume BigIndian byte order
 */
 object BinaryUtil {
 	
-	def shortToBytes(num: Short): Array[Byte] = {
+	def bytes(num: Short): Array[Byte] = {
 		val bytes = new Array[Byte](2)
 		bytes(0) = (num >> 8).asInstanceOf[Byte]
 		bytes(1) = (num).asInstanceOf[Byte]
 		bytes
 	}
 
-	def intToBytes(num: Int): Array[Byte] = {
+	def bytes(num: Int): Array[Byte] = {
 		val bytes = new Array[Byte](4)
 		bytes(0) = (num >> 24).asInstanceOf[Byte]
 		bytes(1) = (num >> 16).asInstanceOf[Byte]
@@ -24,7 +23,7 @@ object BinaryUtil {
 		bytes
 	}
 
-	def longToBytes(num: Long): Array[Byte] = {
+	def bytes(num: Long): Array[Byte] = {
 		val bytes = new Array[Byte](8)
 		bytes(0) = (num >> 56).asInstanceOf[Byte]
 		bytes(1) = (num >> 48).asInstanceOf[Byte]
@@ -37,23 +36,23 @@ object BinaryUtil {
 		bytes
 	}
 
-	def doubleToBytes(num: Double): Array[Byte] = {
-		longToBytes(java.lang.Double.doubleToLongBits(num))
+	def bytes(num: Double): Array[Byte] = {
+		bytes(java.lang.Double.doubleToLongBits(num))
 	}
 
-	def bytesToShort(bytes: Array[Byte]): Short = {
+	def toShort(bytes: Array[Byte]): Short = {
 		((bytes(0) << 8)
 		+ (bytes(1) & 0xff)).asInstanceOf[Short]
 	}
 
-	def bytesToInt(bytes: Array[Byte]): Int = {
+	def toInt(bytes: Array[Byte]): Int = {
 		((bytes(0) << 24)
 		+ (bytes(1) << 16)
 		+ (bytes(2) << 8)
 		+ (bytes(3) & 0xff)).asInstanceOf[Int]	
 	}
 
-	def bytesToLong(bytes: Array[Byte]): Long = {
+	def toLong(bytes: Array[Byte]): Long = {
 		(((bytes(0) & 0xffL) << 56)
 		+ ((bytes(1) & 0xffL) << 48)
 		+ ((bytes(2) & 0xffL) << 40)
@@ -64,67 +63,8 @@ object BinaryUtil {
 		+ (bytes(7) & 0xff)).asInstanceOf[Long]	
 	}
 
-	def bytesToDouble(bytes: Array[Byte]): Double = {
-		java.lang.Double.longBitsToDouble(bytesToLong(bytes))
-	}
-
-	def eventToBytes(event: Event, keyIndex: EventKeyIndex): Array[Byte] = {
-		val bytes = mutable.ArrayBuffer[Byte]()
-
-		bytes ++= longToBytes(event.ts)
-		val strBytes = mutable.ArrayBuffer[Byte]()
-		event.strValues foreach { case (key, value) =>
-			val index = keyIndex.getIndexValueAndOptionallyAdd(key)
-			strBytes ++= shortToBytes(index)
-			strBytes += value.size.byteValue
-			strBytes ++= value.getBytes
-		}
-		bytes ++= shortToBytes((strBytes.size+2).shortValue)
-		bytes ++= shortToBytes(event.strValues.size.shortValue)
-		bytes ++= strBytes
-		val dblBytes = mutable.ArrayBuffer[Byte]()
-		event.dblValues foreach { case (key, value) =>
-			val index = keyIndex.getIndexValueAndOptionallyAdd(key)
-			dblBytes ++= shortToBytes(index)
-			dblBytes ++= doubleToBytes(value)
-		}
-		bytes ++= shortToBytes((dblBytes.size+2).shortValue)
-		bytes ++= shortToBytes(event.dblValues.size.shortValue)
-		bytes ++= dblBytes
-
-		bytes.toArray
-	}
-
-	def bytesToLazyEvent(bytes: Array[Byte], bladeMeta: BladeMetaData): LazyEvent = {
-		new LazyEvent(bytes, bladeMeta.eventKeyIndex)
-	}
-
-	def bladeMetaToBytes(bladeMeta: BladeMetaData): Array[Byte] = {
-		val bytes = mutable.ArrayBuffer[Byte]()
-		bytes ++= longToBytes(bladeMeta.timestamp)
-		bladeMeta.eventKeyIndex.indexMap.foreach { case (key, value) =>
-			bytes ++= shortToBytes(key)
-			bytes ++= shortToBytes(value.size.toShort)
-			bytes ++= value.getBytes
-		}
-		bytes.toArray
-	}
-
-	def bytesToBladeMeta(bytes: Array[Byte]): BladeMetaData = {
-		val timestamp = bytesToLong(slice(bytes, 0,8))
-		val indexMap = mutable.Map[Short, String]()
-		var curr = 8
-		while(curr < bytes.size) {
-			val key = bytesToShort(slice(bytes, curr, curr+2))
-			curr += 2
-			val vLength = bytesToShort(slice(bytes, curr, curr+2))
-			curr +=2
-			val value = getStringValue(bytes, curr, vLength)
-			curr += vLength
-			indexMap(key) = value
-		}
-		val keyIndex = new EventKeyIndex(indexMap)
-		new BladeMetaData(timestamp, keyIndex)
+	def toDouble(bytes: Array[Byte]): Double = {
+		java.lang.Double.longBitsToDouble(toLong(bytes))
 	}
 
 	def slice(bytes: Array[Byte], start: Int, until: Int): Array[Byte] = {
@@ -165,7 +105,7 @@ object BinaryUtil {
 		res
 	}
 
-	def getStringValue(bytes: Array[Byte], pos: Int, length: Int): String = {
+	def toStringValue(bytes: Array[Byte], pos: Int, length: Int): String = {
 		new String(slice(bytes, pos, pos + length))
 	}
 

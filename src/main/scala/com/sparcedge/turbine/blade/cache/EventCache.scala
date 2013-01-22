@@ -2,7 +2,7 @@ package com.sparcedge.turbine.blade.cache
 
 import scala.concurrent.ExecutionContext
 import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.util.{Timer,WrappedTreeMap,BladeMetaData}
+import com.sparcedge.turbine.blade.util.{Timer,WrappedTreeMap}
 import org.joda.time.format.DateTimeFormat
 
 object EventCache {

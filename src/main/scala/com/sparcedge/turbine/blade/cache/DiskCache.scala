@@ -3,8 +3,9 @@ package com.sparcedge.turbine.blade.cache
 import java.io._
 import scala.collection.mutable
 
-import com.sparcedge.turbine.blade.event.{Event,LazyEvent,ConcreteEvent}
-import com.sparcedge.turbine.blade.util._
+import com.sparcedge.turbine.blade.event.{Event,ConcreteEvent}
+import com.sparcedge.turbine.blade.util.{DiskUtil,Timer,CustomByteBuffer}
+import com.sparcedge.turbine.blade.util.BinaryUtil._
 import com.sparcedge.turbine.blade.query.Blade
 
 class DiskCache(val blade: Blade) {
@@ -51,7 +52,7 @@ class DiskCache(val blade: Blade) {
 	def writeEventToSegmentFiles(event: Event, segmentOutStreamMap: Map[String,BufferedOutputStream]) {
 		segmentOutStreamMap foreach { case (segment, outStream) =>
 			if(segment == "ts") {
-				outStream.write(BinaryUtil.longToBytes(event.ts))
+				outStream.write(bytes(event.ts))
 			} else {
 				writeEventSegment(event, segment, outStream)
 			}
@@ -62,7 +63,7 @@ class DiskCache(val blade: Blade) {
 		event.dblValues.get(segment) match {
 			case Some(value) => 
 				outStream.write(1.byteValue)
-				outStream.write(BinaryUtil.doubleToBytes(value))
+				outStream.write(bytes(value))
 			case None => event.strValues.get(segment) match {
 				case Some(value) =>
 					outStream.write(2.byteValue)
@@ -84,11 +85,19 @@ class DiskCache(val blade: Blade) {
 		val segmentBufferMap = createSegmentBufferMap("ts" :: segments.toList) 
 		val timer = new Timer
 		var cnt = 0
+		var diskTime = 0L
+		var processTime = 0L
 		timer.start()
 		try {
 			val tsBuffer = segmentBufferMap("ts")
 			while(tsBuffer.hasRemaining) {
-				processFun(readEventFromBuffers(segmentBufferMap))
+				val ds = System.currentTimeMillis
+				val event = readEventFromBuffers(segmentBufferMap)
+				diskTime += (System.currentTimeMillis - ds)
+
+				val ps = System.currentTimeMillis
+				processFun(event)
+				processTime += (System.currentTimeMillis - ps)
 				cnt += 1
 			}
 		} catch {
@@ -96,6 +105,8 @@ class DiskCache(val blade: Blade) {
 		} finally {
 			segmentBufferMap.values.foreach(_.close())
 		}
+
+		println(s"Disk Time: ${diskTime}, Process Time: ${processTime}")
 
 		timer.stop("Processed " + cnt + " Events")
 	}
@@ -108,7 +119,7 @@ class DiskCache(val blade: Blade) {
 		bufferMap.foreach { case (segment, buffer) =>
 			if(segment == "ts") {
 				bufferMap("ts").readBytes(lngArr, 8)
-				timestamp = BinaryUtil.bytesToLong(lngArr)
+				timestamp = toLong(lngArr)
 			} else {
 				readSegmentToCorrectMap(segment, buffer, strValues, dblValues)
 			}
@@ -123,7 +134,7 @@ class DiskCache(val blade: Blade) {
 			// Skip -- segment does not exist for event
 		} else if(byte == 1) {
 			buffer.readBytes(lngArr,8)
-			dblValues += (segment -> BinaryUtil.bytesToDouble(lngArr))
+			dblValues += (segment -> toDouble(lngArr))
 		} else if(byte == 2) {
 			val len = buffer.readByte
 			strValues += (segment -> new String(buffer.getBytes(len)))

@@ -27,8 +27,8 @@ trait TurbineHttpService extends HttpService {
 				}
 			}
 		} ~
-		post {
-			path("query") { 
+		path("query") {
+			post {	
 				entity(as[String]) { rawQuery =>
 					respondWithMediaType(`application/json`) { ctx =>
 						bladeManager ! QueryDispatchRequest(rawQuery, ctx)
@@ -36,5 +36,5 @@ trait TurbineHttpService extends HttpService {
 				}
 			}
 		}
-	}	
+	}
 }

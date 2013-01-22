@@ -9,7 +9,6 @@ import scala.concurrent.{Await,Future,Promise,ExecutionContext}
 import scala.concurrent.duration._
 import java.util.SortedMap
 
-//TODO: Update Aggregate Cache Functions
 class AggregateCache(cache: EventCache) {
 
 	val aggregateCache = mutable.Map[String, Future[CachedAggregate]]()

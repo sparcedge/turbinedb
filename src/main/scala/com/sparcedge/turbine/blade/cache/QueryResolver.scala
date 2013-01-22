@@ -3,7 +3,7 @@ package com.sparcedge.turbine.blade.cache
 import scala.collection.mutable
 import scala.collection.GenMap
 import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.event.Event
+import com.sparcedge.turbine.blade.event.{Event,ConcreteEvent}
 import com.sparcedge.turbine.blade.util.{Timer,WrappedTreeMap}
 
 object QueryResolver {
@@ -81,7 +81,7 @@ object QueryResolver {
 
 	/* END STREAMING PROCESSING */
 
-	/* DISK BASED STREAMING*/
+	/* DISK BASED STREAMING */
 
 	def matchGroupReduceEventAndUpdateAggregateCalculations(event: Event, matches: Iterable[Match], groupings: Iterable[Grouping], aggregateCalculations: List[(Reducer,WrappedTreeMap[String,ReducedResult])]) {
 		if(eventMatchesAllCriteria(event, matches)) {
@@ -103,7 +103,7 @@ object QueryResolver {
 		}
 	}
 
-	/* END DISK BASED STREAMING*/
+	/* END DISK BASED STREAMING */
 
 	def removeHourGroupFlattendAndReduceAggregate(aggregate: WrappedTreeMap[String,ReducedResult], output: String): WrappedTreeMap[String,ReducedResult] = {
 		val timer = new Timer()

@@ -1,8 +1,9 @@
 package com.sparcedge.turbine.blade.util
 
 import java.io._
-import com.sparcedge.turbine.blade.event.{Event,LazyEvent,ConcreteEvent}
+import com.sparcedge.turbine.blade.event.{Event,ConcreteEvent}
 import com.sparcedge.turbine.blade.query.Blade
+import BinaryUtil._
 
 object DiskUtil {
 
@@ -59,7 +60,7 @@ object DiskUtil {
 			itsFile.seek(len-8)
 			itsFile.read(bArr)
 			itsFile.close()
-			BinaryUtil.bytesToLong(bArr)
+			toLong(bArr)
 		} else {
 			0L
 		}

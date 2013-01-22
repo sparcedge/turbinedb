@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.blade.util
 
 import java.io.RandomAccessFile
+import BinaryUtil._
 
 class CustomByteBuffer(fileName: String, size: Int) {
 	private val file = new RandomAccessFile(fileName, "r")
@@ -26,7 +27,7 @@ class CustomByteBuffer(fileName: String, size: Int) {
 
 	def readBytes(arr: Array[Byte], num: Int): Int = {
 		if(currIndex + num < bSize) {
-			BinaryUtil.transfer(buffer, arr, currIndex, 0, num)
+			transfer(buffer, arr, currIndex, 0, num)
 			currIndex = currIndex + num
 			num
 		} else {
@@ -35,7 +36,7 @@ class CustomByteBuffer(fileName: String, size: Int) {
 			while(bytesLeft > 0) {
 				val overSize = bytesLeft > (bSize - currIndex)
 				val bytesToTake = if (overSize) bSize - currIndex else bytesLeft
-				BinaryUtil.transfer(buffer, arr, currIndex, arrIndex, bytesToTake)
+				transfer(buffer, arr, currIndex, arrIndex, bytesToTake)
 				arrIndex += bytesToTake
 				bytesLeft -= bytesToTake
 				currIndex += bytesToTake
@@ -59,8 +60,8 @@ class CustomByteBuffer(fileName: String, size: Int) {
 			while(bytesLeft > 0) {
 				val overSize = (bytesLeft > bSize - currIndex)
 				val endIndex = if (overSize) bSize else currIndex + bytesLeft
-				val temp = BinaryUtil.slice(buffer, currIndex, endIndex)
-				res = BinaryUtil.join(res, temp)
+				val temp = slice(buffer, currIndex, endIndex)
+				res = join(res, temp)
 				bytesLeft -= endIndex - currIndex
 				currIndex = endIndex
 				if(overSize) {
