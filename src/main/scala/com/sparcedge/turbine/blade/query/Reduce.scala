@@ -25,7 +25,7 @@ class Reduce (reducers: Option[List[Reducer]], filter: Option[Map[String,JObject
 	val reducerList = reducers.getOrElse(List[Reducer]())
 }
 
-class Reducer (val propertyName: String, val reducer: String, val segment: String) {
+case class Reducer (val propertyName: String, val reducer: String, val segment: String) {
 
 	def createReduceFunction(): (Iterable[Event]) => ReducedResult = {
 	    reducer match {
@@ -45,12 +45,14 @@ class Reducer (val propertyName: String, val reducer: String, val segment: Strin
 }
 
 class ReducedResult (val segment: String, val reducer: String, var output: Option[String], var value: Double = 0.0, var count: Int = 0) {
+
 	val streamingReduceFunction = reducer match {
-		case "max" => ReducerFunctions.MAX_STREAMING(_:Double, _:Int, _:Option[Any])
-		case "min" => ReducerFunctions.MIN_STREAMING(_:Double, _:Int, _:Option[Any])
-		case "avg" => ReducerFunctions.AVG_STREAMING(_:Double, _:Int, _:Option[Any])
-		case "sum" => ReducerFunctions.SUM_STREAMING(_:Double, _:Int, _:Option[Any])
-		case "count" => ReducerFunctions.COUNT_STREAMING(_:Double, _:Int, _:Option[Any])
+		case "max" => ReducerFunctions.MAX_STREAMING(_:Double, _:Int, _:Double)
+		case "min" => ReducerFunctions.MIN_STREAMING(_:Double, _:Int, _:Double)
+		case "avg" => ReducerFunctions.AVG_STREAMING(_:Double, _:Int, _:Double)
+		case "sum" => ReducerFunctions.SUM_STREAMING(_:Double, _:Int, _:Double)
+		// TODO: Make String Work!
+		case "count" => ReducerFunctions.COUNT_STREAMING(_:Double, _:Int, _:Double)
 	}
 
 	val reReduceFunction = reducer match {
@@ -62,9 +64,12 @@ class ReducedResult (val segment: String, val reducer: String, var output: Optio
 	}
 
 	def apply(event: Event) {
-		val (newValue,newCount) = streamingReduceFunction(value, count, event(segment))
-		value = newValue
-		count = newCount
+		val dblOpt = event.getDouble(segment)
+		if(!dblOpt.isEmpty) {
+			val (newValue,newCount) = streamingReduceFunction(value, count, dblOpt.get)
+			value = newValue
+			count = newCount
+		}
 	}
 
 	def reReduce(other: ReducedResult): ReducedResult = {

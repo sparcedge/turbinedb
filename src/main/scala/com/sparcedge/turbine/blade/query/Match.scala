@@ -3,7 +3,7 @@ package com.sparcedge.turbine.blade.query
 import com.sparcedge.turbine.blade.event.Event
 import org.json4s.JsonAST._
 
-class Match(val segment: String, matchVal: Map[String,JValue]) {
+case class Match(val segment: String, matchVal: Map[String,JValue]) {
 
 	val expression = createMatchExpression()
 

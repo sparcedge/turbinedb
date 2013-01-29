@@ -1,8 +1,8 @@
-package com.sparcedge.turbine.blade.cache
+package com.sparcedge.turbine.blade.util
 
 import scala.collection.GenMap
-import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.util.WrappedTreeMap
+import com.sparcedge.turbine.blade.data.QueryUtil
+import com.sparcedge.turbine.blade.query.ReducedResult
 
 object CustomJsonSerializer {
 
@@ -36,7 +36,7 @@ object CustomJsonSerializer {
 	}
 
 	private def tokenizeKey(key: String): Array[String] = {
-		key.split(QueryResolver.GROUP_SEPARATOR)
+		key.split(QueryUtil.GROUP_SEPARATOR)
 	}
 
 	private def addJsonElementDiff(prev: Array[String], curr: Array[String], builder: StringBuilder) {

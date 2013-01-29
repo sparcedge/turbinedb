@@ -1,5 +1,6 @@
 package com.sparcedge.turbine.blade.query
 
+import com.sparcedge.turbine.blade.data.IndexKey
 import scala.collection.immutable.TreeMap
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -36,6 +37,10 @@ case class Query (
 
 	def createAggregateCacheString(reducer: Reducer): String = {
 		orderedMatches.mkString + "-" + group.mkString + "-" + reducer.segment + "-" + reducer.reducer
+	}
+
+	def createAggregateIndexKey(reducer: Reducer): IndexKey = {
+		IndexKey(reducer, matches, groupings)
 	}
 
 	def retrieveRequiredFields(): Set[String] = {

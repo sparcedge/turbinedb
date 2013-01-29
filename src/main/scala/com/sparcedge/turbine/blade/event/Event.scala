@@ -19,4 +19,20 @@ trait Event {
 	def getString(segment: String): Option[String] = {
 		strValues.get(segment)
 	}
+
+	def containsDouble(segment: String): Boolean = {
+		dblValues.contains(segment)
+	}
+
+	def containsString(segment: String): Boolean = {
+		strValues.contains(segment)
+	}
+
+	def getDoubleUnsafe(segment: String): Double = {
+		dblValues(segment)
+	}
+
+	def getStringUnsafe(segment: String): String = {
+		strValues(segment)
+	}
 }

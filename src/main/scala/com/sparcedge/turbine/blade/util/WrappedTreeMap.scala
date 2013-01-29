@@ -20,7 +20,7 @@ class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
 		treeMap.put(key, value)
 	}
 
-	def contains(key: K): Boolean = {
+	def containsKey(key: K): Boolean = {
 		treeMap.containsKey(key)
 	}
 

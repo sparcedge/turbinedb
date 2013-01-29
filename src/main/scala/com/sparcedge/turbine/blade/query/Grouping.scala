@@ -2,42 +2,44 @@ package com.sparcedge.turbine.blade.query
 
 import org.joda.time.format.DateTimeFormat
 import com.sparcedge.turbine.blade.event.Event
+import com.sparcedge.turbine.blade.util.CrazyDateUtil._
 
 case class Grouping (`type`: String, value: Option[String]) {
+
+	val requiredSegment: String = `type` match {
+		case "duration" => "ts"
+		case "resource" => "resource"
+		case "segment" => value.get
+	}
+
 	val segment: Option[String] = `type` match {
 		case "duration" => None
 		case "resource" => Some("resource")
 		case "segment" => Some(value.get)
 	}
 
-	def createGroupFunction(): (Event) => Any = {
-		`type` match {
-			case "duration" =>
-				val formatter = value.get match {
-					case "year" =>
-						DateTimeFormat.forPattern("yyyy")
-					case "month" =>
-						DateTimeFormat.forPattern("yyyy-MM")
-					case "week" =>
-						DateTimeFormat.forPattern("yyyy-ww")
-					case "day" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd")
-					case "hour" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd-HH")
-					case "minute" =>
-						DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
-					case _ =>
-						throw new Exception("Invalid Duration Value")
-				}
-				{ event: Event => formatter.print(event.ts) }
-			case "resource" =>
-				{ event: Event => event("resource").getOrElse(null) }
-			case "segment" =>
-				{ event: Event => event(value.get).getOrElse(null) }
-			case _ =>
-				throw new Exception("Bad Grouping Type")
+	def createGroup(event: Event): Any = {
+		if(`type` == "duration") {
+			val duration = value.get
+			if(duration == "year") {
+				calculateYearString(event.ts).toString
+			} else if(duration == "month") {
+				calculateMonthString(event.ts)
+			} else if(duration == "day") {
+				calculateDayString(event.ts)
+			} else if(duration == "hour") {
+				calculateHourString(event.ts)
+			} else if(duration == "minute") {
+				calculateMinuteString(event.ts)
+			} else {
+				throw new Exception("Invalid Duration Value")
+			}
+		} else if(`type` == "resource") {
+			event("resource").getOrElse("").toString
+		} else if(`type` == "segment") {
+			event(value.get).getOrElse("").toString
+		} else {
+			throw new Exception("Bad Grouping Type")
 		}
 	}
-
-	lazy val groupFunction = createGroupFunction()
 }

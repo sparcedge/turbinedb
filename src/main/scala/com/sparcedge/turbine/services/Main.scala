@@ -3,8 +3,9 @@ package com.sparcedge.turbine.services
 import spray.can.server.SprayCanHttpServerApp
 import akka.actor.Props
 import akka.actor.{ActorSystem,Actor,Props}
+import com.typesafe.config.ConfigFactory
 
-import com.sparcedge.turbine.blade.TurbineBladeManager
+import com.sparcedge.turbine.blade.TurbineManager
 import com.sparcedge.turbine.blade.config.BladeConfig
 import com.sparcedge.turbine.blade.util.{Timer,DiskUtil}
 import com.sparcedge.turbine.blade.query.Blade
@@ -17,12 +18,13 @@ object Main extends App with SprayCanHttpServerApp {
 	}
 
 	val config = BladeConfig(configStr)
-	val actorSystem = ActorSystem("TurbineBladeActorSystem")
+	val appConfig = ConfigFactory.load()
+	val actorSystem = ActorSystem("TurbineActorSystem", appConfig)
 	val printTimings = config.printTimings.getOrElse(false)
 	val preloadBlades = config.preloadBlades.getOrElse(List[Blade]())
 	val dataDirectory = config.dataDirectory.getOrElse("data")
 
-	val bladeManager = actorSystem.actorOf(Props(new TurbineBladeManager(preloadBlades)), name = "BladeManager")
+	val bladeManager = actorSystem.actorOf(Props(new TurbineManager(preloadBlades)), name = "BladeManager")
 
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
