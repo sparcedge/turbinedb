@@ -82,7 +82,7 @@ object BinaryUtil {
 		var currFrom = startFrom
 		var currTo = startTo
 		while(cnt < count) {
-			from(currFrom) = to(currTo)
+			to(currTo) = from(currFrom)
 			currFrom += 1
 			currTo += 1
 			cnt += 1
