@@ -1,19 +1,18 @@
-package com.sparcedge.turbine.blade.data
+package com.sparcedge.turbine.data
 
 import java.io._
 import scala.collection.mutable
 import akka.actor.ActorRef
 
-import com.sparcedge.turbine.blade.event.{Event,ConcreteEvent}
-import com.sparcedge.turbine.blade.util.{DiskUtil,Timer,CustomByteBuffer}
-import com.sparcedge.turbine.blade.query.{Blade,Match,Grouping}
+import com.sparcedge.turbine.event.{Event,ConcreteEvent}
+import com.sparcedge.turbine.util.{DiskUtil,Timer,CustomByteBuffer}
+import com.sparcedge.turbine.query.{Blade,Match,Grouping}
 
-import com.sparcedge.turbine.blade.util.DiskUtil._
-import com.sparcedge.turbine.blade.util.BinaryUtil._
-import com.sparcedge.turbine.blade.data.QueryUtil._
+import com.sparcedge.turbine.util.DiskUtil._
+import com.sparcedge.turbine.util.BinaryUtil._
+import com.sparcedge.turbine.data.QueryUtil._
 import AggregateIndex._
 
-//TODO: Replace cache with data
 class DataPartition(val blade: Blade) {
 
 	ensureCacheDirectoryExists(blade)
@@ -87,13 +86,21 @@ class DataPartition(val blade: Blade) {
 		}
 	}
 
-	def populateIndexes(indexes: Iterable[Index], reqSegments: Iterable[String], optSegments: Iterable[String], matches: Iterable[Match], groupings: Iterable[Grouping]) {
+	def populateIndexes(indexes: Iterable[Index]) {
+		val keys = indexes.map(_.indexKey)
+		val reqSegments = retrieveRequiredSegments(keys)
+		val optSegments = retrieveOptionalSegments(keys)
 		if(reqSegments.forall(dataSegments.contains(_))) {
-			populateIndexes(indexes, reqSegments ++ optSegments, matches, groupings)
+			populateIndexes(indexes, reqSegments ++ optSegments)
 		}
 	}
 
-	def populateIndexes(indexes: Iterable[Index], segments: Iterable[String], matches: Iterable[Match], groupings: Iterable[Grouping]) {
+	def populateIndexes(indexes: Iterable[Index], segments: Iterable[String]) {
+		val matches = indexes.head.indexKey.matches
+		val groupings = indexes.head.indexKey.groupings
+		val matchBuilder = new MatchBuilder(matches)
+		val groupStrBuilder = new GroupStringBuilder(aggregateGrouping, groupings)
+		val indexUpdateBuilder = new IndexUpdateBuilder(indexes)
 		val segmentBufferList = createSegmentBufferList("ts" :: segments.toList) 
 		val timer = new Timer()
 		timer.start()
@@ -101,11 +108,11 @@ class DataPartition(val blade: Blade) {
 		try {
 			val tsBuffer = segmentBufferList.find(_._1 == "ts").get._2
 			while(tsBuffer.hasRemaining) {
-				val event = readEventFromBuffers(segmentBufferList)
-				if(eventMatchesAllCriteria(event, matches)) {
-					val fullGroupings = aggregateGrouping :: groupings.toList
-					val grpStr = createGroupStringForEvent(event, fullGroupings)
-					indexes.foreach(_.updateUnchecked(event, grpStr))
+				readNextFromBuffers(segmentBufferList, matchBuilder, groupStrBuilder, indexUpdateBuilder)
+				if(matchBuilder.satisfiesAllMatches) {
+					val grpStr = groupStrBuilder.buildGroupString
+					indexUpdateBuilder.executeUpdates(grpStr)
+					indexUpdateBuilder.reset()
 				}
 				cnt += 1
 			}
@@ -117,9 +124,7 @@ class DataPartition(val blade: Blade) {
 		timer.stop("Processed " + cnt + " Events")
 	}
 
-	def readEventFromBuffers(bufferList: Iterable[(String, CustomByteBuffer)]): Event = {
-		val strValues = mutable.Map[String,String]()
-		val dblValues = mutable.Map[String,Double]()
+	def readNextFromBuffers(bufferList: Iterable[(String, CustomByteBuffer)], matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
 		var timestamp = 0L
 
 		bufferList.foreach { segBuf =>
@@ -127,23 +132,30 @@ class DataPartition(val blade: Blade) {
 				segBuf._2.readBytes(lngArr, 8)
 				timestamp = toLong(lngArr)
 			} else {
-				readSegmentToCorrectMap(segBuf._1, segBuf._2, strValues, dblValues)
+				readSegmentBasedOnType(segBuf._1, segBuf._2, matchBuilder, grpStringBuilder, indexUpdateBuilder)
 			}
 		}
 
-		new ConcreteEvent(0L, timestamp, strValues, dblValues)
+		grpStringBuilder.applyTimestamp(timestamp)
 	}
 
-	def readSegmentToCorrectMap(segment: String, buffer: CustomByteBuffer, strValues: mutable.Map[String,String], dblValues: mutable.Map[String,Double]) {
+	def readSegmentBasedOnType(segment: String, buffer: CustomByteBuffer, matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
 		val byte = buffer.readByte
 		if(byte == 0) {
-			// Skip -- segment does not exist for event
+			matchBuilder.applySegment(segment)
+			grpStringBuilder.applySegment(segment)
 		} else if(byte == 1) {
 			buffer.readBytes(lngArr,8)
-			dblValues += (segment -> toDouble(lngArr))
+			val dbl = toDouble(lngArr)
+			matchBuilder.applySegment(segment, dbl)
+			grpStringBuilder.applySegment(segment, dbl)
+			indexUpdateBuilder.applySegment(segment, dbl)
 		} else if(byte == 2) {
 			val len = buffer.readByte
-			strValues += (segment -> new String(buffer.getBytes(len)))
+			val str = new String(buffer.getBytes(len))
+			matchBuilder.applySegment(segment, str)
+			grpStringBuilder.applySegment(segment, str)
+			indexUpdateBuilder.applySegment(segment,str)
 		} else {
 			// Unrecognized Byte! - Probably bad!
 		}
@@ -157,5 +169,13 @@ class DataPartition(val blade: Blade) {
 				None
 			}
 		}
+	}
+
+	def retrieveRequiredSegments(keys: Iterable[IndexKey]): Iterable[String] = {
+		keys.head.matches.map(_.segment) ++: keys.head.groupings.flatMap(_.segment)
+	}
+
+	def retrieveOptionalSegments(keys: Iterable[IndexKey]): Iterable[String] = {
+		keys.map(_.reducer.segment)
 	}
 }

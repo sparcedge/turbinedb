@@ -1,12 +1,12 @@
-package com.sparcedge.turbine.blade
+package com.sparcedge.turbine
 
 import akka.actor.{Actor,Props,ActorSystem,ActorRef}
 import akka.routing.RoundRobinRouter
 import scala.concurrent.duration._
 import java.util.concurrent.atomic.AtomicLong
-import com.sparcedge.turbine.blade.data.BladeManager
-import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.util.{DiskUtil,Timer}
+import com.sparcedge.turbine.data.BladeManager
+import com.sparcedge.turbine.query._
+import com.sparcedge.turbine.util.{DiskUtil,Timer}
 import scala.collection.mutable
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat

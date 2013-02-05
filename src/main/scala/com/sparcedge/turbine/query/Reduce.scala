@@ -1,6 +1,6 @@
-package com.sparcedge.turbine.blade.query
+package com.sparcedge.turbine.query
 
-import com.sparcedge.turbine.blade.event.Event
+import com.sparcedge.turbine.event.Event
 import org.json4s.JsonAST._
 
 object Reduce {
@@ -44,6 +44,7 @@ case class Reducer (val propertyName: String, val reducer: String, val segment: 
 	val reduceFunction = createReduceFunction()
 }
 
+// TODO: Remove Tuples!!
 class ReducedResult (val segment: String, val reducer: String, var output: Option[String], var value: Double = 0.0, var count: Int = 0) {
 
 	val streamingReduceFunction = reducer match {
@@ -70,6 +71,23 @@ class ReducedResult (val segment: String, val reducer: String, var output: Optio
 			value = newValue
 			count = newCount
 		}
+	}
+
+	def apply(numeric: Double) {
+		val (newValue,newCount) = streamingReduceFunction(value, count, numeric)
+		value = newValue
+		count = newCount
+	}
+
+	def apply(str: String) {
+		if(reducer == "count") {
+			value += 1
+			count += 1
+		}
+	}
+
+	def apply(ts: Long) {
+		// TODO: Shouldn't -- Handle It
 	}
 
 	def reReduce(other: ReducedResult): ReducedResult = {

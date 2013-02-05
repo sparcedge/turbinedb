@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.query
+package com.sparcedge.turbine.query
 
 import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
@@ -12,8 +12,8 @@ import akka.pattern.ask
 import spray.routing.RequestContext
 import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 
-import com.sparcedge.turbine.blade.util.{WrappedTreeMap,CustomJsonSerializer}
-import com.sparcedge.turbine.blade.data._
+import com.sparcedge.turbine.util.{WrappedTreeMap,CustomJsonSerializer}
+import com.sparcedge.turbine.data._
 
 object QueryHandler {
 

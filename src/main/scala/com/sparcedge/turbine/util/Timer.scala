@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.util
+package com.sparcedge.turbine.util
 
 object Timer {
 	var printTimings = false

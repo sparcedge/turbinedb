@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.util
+package com.sparcedge.turbine.util
 
 import java.util.{TreeMap,SortedMap}
 import collection.JavaConversions._

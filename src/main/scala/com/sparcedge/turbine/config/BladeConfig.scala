@@ -1,6 +1,6 @@
-package com.sparcedge.turbine.blade.config
+package com.sparcedge.turbine.config
 
-import com.sparcedge.turbine.blade.query.Blade
+import com.sparcedge.turbine.query.Blade
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 

@@ -1,8 +1,8 @@
-package com.sparcedge.turbine.blade.util
+package com.sparcedge.turbine.util
 
 import scala.collection.GenMap
-import com.sparcedge.turbine.blade.data.QueryUtil
-import com.sparcedge.turbine.blade.query.ReducedResult
+import com.sparcedge.turbine.data.QueryUtil
+import com.sparcedge.turbine.query.ReducedResult
 
 object CustomJsonSerializer {
 

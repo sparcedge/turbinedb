@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.blade.event
+package com.sparcedge.turbine.event
 
 import scala.collection.mutable
 

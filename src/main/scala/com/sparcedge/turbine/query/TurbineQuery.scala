@@ -1,6 +1,6 @@
-package com.sparcedge.turbine.blade.query
+package com.sparcedge.turbine.query
 
-import com.sparcedge.turbine.blade.data.IndexKey
+import com.sparcedge.turbine.data.IndexKey
 import scala.collection.immutable.TreeMap
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat

@@ -1,8 +1,8 @@
-package com.sparcedge.turbine.blade.util
+package com.sparcedge.turbine.util
 
 import java.io._
-import com.sparcedge.turbine.blade.event.{Event,ConcreteEvent}
-import com.sparcedge.turbine.blade.query.Blade
+import com.sparcedge.turbine.event.{Event,ConcreteEvent}
+import com.sparcedge.turbine.query.Blade
 import BinaryUtil._
 
 object DiskUtil {

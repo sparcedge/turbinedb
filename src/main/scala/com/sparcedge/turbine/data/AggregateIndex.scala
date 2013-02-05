@@ -1,9 +1,9 @@
-package com.sparcedge.turbine.blade.data
+package com.sparcedge.turbine.data
 
 import akka.actor.{Actor,ActorRef,Stash}
-import com.sparcedge.turbine.blade.util.WrappedTreeMap
-import com.sparcedge.turbine.blade.event.Event
-import com.sparcedge.turbine.blade.query._
+import com.sparcedge.turbine.util.WrappedTreeMap
+import com.sparcedge.turbine.event.Event
+import com.sparcedge.turbine.query._
 import java.util.HashMap
 import scala.collection.mutable
 import QueryUtil._
@@ -50,7 +50,7 @@ class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with Stash 
 	}
 }
 
-class Index(indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade) {
+class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade) {
 	val index = new WrappedTreeMap[String,ReducedResult]()
 	val fullGroupings = aggregateGrouping :: indexKey.groupings.toList
 
@@ -69,5 +69,20 @@ class Index(indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade) {
 	def updateUnchecked(event: Event, grpStr: String) {
 		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
 		reducer(event)	
+	}
+
+	def updateUnchecked(value: Double, grpStr: String) {
+		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		reducer(value)	
+	}
+
+	def updateUnchecked(value: String, grpStr: String) {
+		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		reducer(value)	
+	}
+
+	def updateUnchecked(value: Long, grpStr: String) {
+		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		reducer(value)	
 	}
 }

@@ -9,7 +9,7 @@ import spray.http._
 import HttpMethods._
 import MediaTypes._
 
-import com.sparcedge.turbine.blade.TurbineManager._
+import com.sparcedge.turbine.TurbineManager._
 
 class TurbineHttpServiceActor(val bladeManager: ActorRef) extends Actor with TurbineHttpService {
 	def actorRefFactory = context

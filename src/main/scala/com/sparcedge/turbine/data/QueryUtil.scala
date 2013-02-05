@@ -1,10 +1,10 @@
-package com.sparcedge.turbine.blade.data
+package com.sparcedge.turbine.data
 
 import scala.collection.mutable
 import scala.collection.GenMap
-import com.sparcedge.turbine.blade.query._
-import com.sparcedge.turbine.blade.event.{Event,ConcreteEvent}
-import com.sparcedge.turbine.blade.util.{Timer,WrappedTreeMap}
+import com.sparcedge.turbine.query._
+import com.sparcedge.turbine.event.{Event,ConcreteEvent}
+import com.sparcedge.turbine.util.{Timer,WrappedTreeMap}
 
 object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
@@ -33,5 +33,16 @@ object QueryUtil {
 		} else {
 			""
 		}
+	}
+
+	def createGroupString(dataGrpValue: String, grpValues: Array[String]): String = {
+		val builder = new StringBuilder
+		builder.append(dataGrpValue)
+		var cnt = 0
+		while(cnt < grpValues.length) {
+			builder.append(GROUP_SEPARATOR).append(grpValues(cnt))
+			cnt += 1
+		}
+		builder.toString
 	}
 }

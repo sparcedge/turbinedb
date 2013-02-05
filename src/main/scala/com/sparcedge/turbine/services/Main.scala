@@ -5,10 +5,10 @@ import akka.actor.Props
 import akka.actor.{ActorSystem,Actor,Props}
 import com.typesafe.config.ConfigFactory
 
-import com.sparcedge.turbine.blade.TurbineManager
-import com.sparcedge.turbine.blade.config.BladeConfig
-import com.sparcedge.turbine.blade.util.{Timer,DiskUtil}
-import com.sparcedge.turbine.blade.query.Blade
+import com.sparcedge.turbine.TurbineManager
+import com.sparcedge.turbine.config.BladeConfig
+import com.sparcedge.turbine.util.{Timer,DiskUtil}
+import com.sparcedge.turbine.query.Blade
 
 
 object Main extends App with SprayCanHttpServerApp {

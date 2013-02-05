@@ -1,6 +1,6 @@
-package com.sparcedge.turbine.blade.query
+package com.sparcedge.turbine.query
 
-import com.sparcedge.turbine.blade.event.Event
+import com.sparcedge.turbine.event.Event
 import org.json4s.JsonAST._
 
 case class Match(val segment: String, matchVal: Map[String,JValue]) {
@@ -8,7 +8,23 @@ case class Match(val segment: String, matchVal: Map[String,JValue]) {
 	val expression = createMatchExpression()
 
 	def apply(event: Event): Boolean = {
-		expression(event)
+		expression(event(segment).getOrElse(null))
+	}
+
+	def apply(): Boolean = {
+		false
+	}
+
+	def apply(str: String): Boolean = {
+		expression(str)
+	}
+
+	def apply(numeric: Double): Boolean = {
+		expression(numeric)
+	}
+
+	def apply(ts: Long): Boolean = {
+		expression(ts)
 	}
 
 	def unboxJValue(jval: JValue): Any = {
@@ -29,22 +45,17 @@ case class Match(val segment: String, matchVal: Map[String,JValue]) {
 		}
 	}
 
-	def createMatchExpression(): Event => Boolean = {
+	def createMatchExpression(): Any => Boolean = {
 		matchVal.head match { case(op, boxedVal) =>
 			val value = unboxJValue(boxedVal)
 			op match {
 				case "eq" =>
-					return { event: Event =>
-						event(segment).getOrElse(null) == value
-					}
+					return { segVal => segVal == value }
 				case "ne" =>
-					return { event: Event =>
-						event(segment).getOrElse(null) != value
-					}
+					return { segVal => segVal != value }
 				case "gt" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
+					return { segVal => 
+						(value,segVal) match {
 							case (x: java.lang.Long, y: java.lang.Double) => x < y
 							case (x: java.lang.Double, y: java.lang.Double) => x < y
 							case (x: String, y: String) => x < y
@@ -52,9 +63,8 @@ case class Match(val segment: String, matchVal: Map[String,JValue]) {
 						}
 					}
 				case "gte" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
+					return { segVal =>
+						(value,segVal) match {
 							case (x: java.lang.Long, y: java.lang.Double) => x <= y
 							case (x: java.lang.Double, y: java.lang.Double) => x <= y
 							case (x: String, y: String) => x <= y
@@ -62,9 +72,8 @@ case class Match(val segment: String, matchVal: Map[String,JValue]) {
 						}
 					}
 				case "lt" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
+					return { segVal =>
+						(value,segVal) match {
 							case (x: java.lang.Long, y: java.lang.Double) => x > y
 							case (x: java.lang.Double, y: java.lang.Double) => x > y
 							case (x: String, y: String) => x > y
@@ -72,9 +81,8 @@ case class Match(val segment: String, matchVal: Map[String,JValue]) {
 						}
 					}
 				case "lte" =>
-					return { event: Event =>
-						val eventValue = event(segment).getOrElse(null)
-						(value,eventValue) match {
+					return { segVal =>
+						(value,segVal) match {
 							case (x: java.lang.Long, y: java.lang.Double) => x >= y
 							case (x: java.lang.Double, y: java.lang.Double) => x >= y
 							case (x: String, y: String) => x >= y
@@ -82,23 +90,12 @@ case class Match(val segment: String, matchVal: Map[String,JValue]) {
 						}
 					}
 				case "in" =>
-					val values = convertJArray(value)
-					return { event: Event =>
-						event(segment) match {
-							case Some(segValue) => values.contains(segValue)
-							case None => false
-						}
-					}
+					val values: List[Any] = convertJArray(value)
+					return { segVal => values.contains(segVal) }
 				case "nin" =>
-					val values = convertJArray(value)
-					return { event: Event =>
-						event(segment) match {
-							case Some(segValue) => !values.contains(segValue)
-							case None => false
-						}
-					}
+					val values: List[Any] = convertJArray(value)
+					return { segVal => !values.contains(segVal) }
 			}
 		}
-	} 
-
+	}
 }
