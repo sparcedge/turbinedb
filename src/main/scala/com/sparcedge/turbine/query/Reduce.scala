@@ -52,7 +52,6 @@ class ReducedResult (val segment: String, val reducer: String, var output: Optio
 		case "min" => ReducerFunctions.MIN_STREAMING(_:Double, _:Int, _:Double)
 		case "avg" => ReducerFunctions.AVG_STREAMING(_:Double, _:Int, _:Double)
 		case "sum" => ReducerFunctions.SUM_STREAMING(_:Double, _:Int, _:Double)
-		// TODO: Make String Work!
 		case "count" => ReducerFunctions.COUNT_STREAMING(_:Double, _:Int, _:Double)
 	}
 

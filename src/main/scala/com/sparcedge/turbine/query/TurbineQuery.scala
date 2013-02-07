@@ -19,6 +19,8 @@ object TurbineQuery {
 
 case class TurbineQuery(blade: Blade, query: Query)
 
+case class TurbineQueryExternal(domain: String, tenant: String, category: String, query: Query)
+
 case class Query (
 	category: String,
 	range: TimeRange,

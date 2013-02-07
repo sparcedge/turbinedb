@@ -14,6 +14,17 @@ object CrazyDateUtil {
 	val hourCalc = chronology.hourOfDay()
 	val minCalc	= chronology.minuteOfHour()
 
+	def test() {
+		var cnt = 0
+		val ms = System.currentTimeMillis
+		val start = ms
+		while(cnt < 5000000) {
+			calculateMinuteCombined(ms)
+			cnt += 1
+		}
+		println(System.currentTimeMillis - start)
+	}
+
 	def calculateYear(ms: Long): Int = {
 		1970 + yearCalc.getValue(ms)
 	}

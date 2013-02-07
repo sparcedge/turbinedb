@@ -45,4 +45,8 @@ object QueryUtil {
 		}
 		builder.toString
 	}
+
+	//def createQueriesFromExternal(extQuery: TurbineQueryExternal): Iterable[TurbineQuery] = {
+//
+	//}
 }

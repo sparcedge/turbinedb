@@ -2,7 +2,7 @@ package com.sparcedge.turbine.query
 
 import org.joda.time.format.DateTimeFormat
 import com.sparcedge.turbine.event.Event
-import com.sparcedge.turbine.util.CrazyDateUtil._
+import com.sparcedge.turbine.util.CrazierDateUtil._
 
 case class Grouping (`type`: String, value: Option[String]) {
 
