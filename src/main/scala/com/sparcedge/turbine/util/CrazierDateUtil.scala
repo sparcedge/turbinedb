@@ -41,15 +41,12 @@ object CrazierDateUtil {
 		}
 	}
 
-	def test() {
-		var cnt = 0
-		val ms = System.currentTimeMillis
-		val start = ms
-		while(cnt < 5000000) {
-			calculateMonthCombined(ms)
-			cnt += 1
-		}
-		println(System.currentTimeMillis - start)
+	def calculateAbsoluteMinute(ms: Long): Long = {
+		ms / MILLIS_PER_MINUTE
+	}
+
+	def calculateAbsoluteHour(ms: Long): Long = {
+		ms / MILLIS_PER_HOUR
 	}
 
 	def calculateYearCombined(ms: Long): Long = {

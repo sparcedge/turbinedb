@@ -32,7 +32,7 @@ class BladeManagerRepository(preloadBlades: Iterable[Blade]) extends Actor {
 	}
 
 	def getBladeManagersInUnboundedRange(sBlade: Blade): Iterable[(Blade,ActorRef)] = {
-		getBladeManagersInRange(sBlade, sBlade.copy(category = sBlade.category+1, period = "0"))
+		getBladeManagersInRange(sBlade, sBlade.copy(category = sBlade.category+1, period = "0001-01"))
 	}
 
 	def getBladeManagersInRange(sBlade: Blade, eBlade: Blade): Iterable[(Blade,ActorRef)] = {

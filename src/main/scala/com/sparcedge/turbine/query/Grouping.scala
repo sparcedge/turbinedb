@@ -45,6 +45,10 @@ case class Grouping (`type`: String, value: Option[String]) {
 			calculateHourCombined(ts).toString
 		} else if(duration == "minute") {
 			calculateMinuteCombined(ts).toString
+		} else if(duration == "ihour") {
+			(calculateAbsoluteHour(ts) % 100000).toString
+		} else if(duration == "iminute") {
+			(calculateAbsoluteHour(ts) % 100000).toString
 		} else {
 			throw new Exception("Invalid Duration Value")
 		}
