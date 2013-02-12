@@ -25,7 +25,7 @@ class Reduce (reducers: Option[List[Reducer]], filter: Option[Map[String,JObject
 	val reducerList = reducers.getOrElse(List[Reducer]())
 }
 
-case class Reducer (val propertyName: String, val reducer: String, val segment: String) {
+case class Reducer (propertyName: String, reducer: String, segment: String) {
 
 	def createReduceFunction(): (Iterable[Event]) => ReducedResult = {
 	    reducer match {
@@ -41,7 +41,17 @@ case class Reducer (val propertyName: String, val reducer: String, val segment: 
 		new ReducedResult(segment, reducer, Some(propertyName))
 	}
 
+	def getCoreReducer(): CoreReducer = {
+		CoreReducer(reducer, segment)
+	}
+
 	val reduceFunction = createReduceFunction()
+}
+
+case class CoreReducer (reducer: String, segment: String) {
+	def createReducedResult(): ReducedResult = {
+		new ReducedResult(segment, reducer, None)
+	}
 }
 
 // TODO: Remove Tuples!!

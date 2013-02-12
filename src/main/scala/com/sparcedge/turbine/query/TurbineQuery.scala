@@ -37,7 +37,7 @@ case class TurbineQuery (
 	}
 
 	def createAggregateIndexKey(reducer: Reducer): IndexKey = {
-		IndexKey(reducer, matches, groupings)
+		IndexKey(reducer.getCoreReducer(), matches, groupings)
 	}
 
 	def retrieveRequiredFields(): Set[String] = {
@@ -50,6 +50,10 @@ case class TurbineQuery (
 
 	val matches = `match`.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
 		new Match(segment, value.extract[Map[String,JValue]])
+	}
+	val reducers = reduce match {
+		case Some(reduce) => reduce.reducerList
+		case None => List[Reducer]()
 	}
 	val groupings = group.getOrElse(List[Grouping]())
 }

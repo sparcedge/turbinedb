@@ -24,6 +24,7 @@ class BladeManager(blade: Blade) extends Actor {
 		Props(new DataPartitionManager(blade)).withDispatcher("com.sparcedge.turbinedb.data-partition-dispatcher"), 
 		s"${blade.toString}-partition-manager"
 	)
+
 	val indexMap = mutable.Map[IndexKey,ActorRef]()
 
 	def receive = {
@@ -61,6 +62,6 @@ class BladeManager(blade: Blade) extends Actor {
 	}
 }
 
-case class IndexKey (reducer: Reducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
+case class IndexKey (reducer: CoreReducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
 	val id = s"${reducer.reducer}.${reducer.segment}.${matches.size}.${groupings.size}.${Random.nextLong}"
 }

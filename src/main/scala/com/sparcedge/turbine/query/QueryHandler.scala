@@ -41,11 +41,13 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		case HandleQuery(queryPackage, ctx) =>
 			val query = queryPackage.query
 
+			val outMap = query.reducers.map(r => ((r.segment, r.reducer) -> r.propertyName)).toMap
+
 			// In the future!!!
 			val bladeManagers = requestBladeManagers(queryPackage)
 			val indexActors = requestIndexActors(bladeManagers, query)
 			val indexes = retrieveIndexesFromActors(indexActors)
-			val combinedIndex = sliceFlattenAndCombineIndexes(indexes, query)
+			val combinedIndex = sliceFlattenAndCombineIndexes(indexes, query, outMap)
 			val jsonResult = convertCombinedIndexToJson(combinedIndex)
 
 			jsonResult.onComplete {
@@ -91,20 +93,21 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		indexResponses.map(responses => responses.map(res => res.index))
 	}
 
-	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery): Future[WrappedTreeMap[String,List[ReducedResult]]] = {
-		val sliced = indexes.map(idxs => idxs.map(sliceIndex(_, query)))
-		val flattened = sliced.map(idxs => idxs.map(removeHourGroupFlattendAndReduceAggregate(_, s"out-${nextCount()}")))
+	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery, outMap: Map[(String,String),String]): Future[WrappedTreeMap[String,List[ReducedResult]]] = {
+		val sliced = indexes.map(idxs => idxs.map(idx => (idx -> sliceIndex(idx, query))))
+		val flattened = sliced.map(idxs => idxs.map { case (idx, agg) => removeHourGroupFlattendAndReduceAggregate(agg, retrieveOutputParameter(idx, outMap)) })
 		flattened.map(combineAggregates(_))
+	}
+
+	def retrieveOutputParameter(index: Index, outMap: Map[(String,String),String]): String = {
+		val reducer = index.indexKey.reducer
+		val segment = reducer.segment
+		val reducerType = reducer.reducer
+		outMap((segment,reducerType))
 	}
 
 	def convertCombinedIndexToJson(combined: Future[WrappedTreeMap[String,List[ReducedResult]]]): Future[String] = {
 		combined.map(CustomJsonSerializer.serializeAggregateGroupMap(_))
-	}
-
-	// TODO: DIRTY DIRTY HACK
-	def nextCount(): Int = {
-		outCount += 1
-		outCount
 	}
 
 	private def sliceIndex(indexVal: Index, query: TurbineQuery): WrappedTreeMap[String,ReducedResult] = {
@@ -125,15 +128,11 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 	def removeHourGroupFlattendAndReduceAggregate(aggregate: WrappedTreeMap[String,ReducedResult], output: String): WrappedTreeMap[String,ReducedResult] = {
 		var flattenedReduced = new WrappedTreeMap[String,ReducedResult]()
 		aggregate foreach { case (key,value) =>
-			try {
-				val newKey = key.substring(QueryUtil.GROUPING_LENGTH)
-				if(flattenedReduced.containsKey(newKey)) {
-					flattenedReduced(newKey) = flattenedReduced(newKey).reReduce(value)
-				} else {
-					flattenedReduced(newKey) = value.createOutputResult(output)
-				}
-			} catch {
-				case ex: StringIndexOutOfBoundsException => // TODO: Handle
+			val newKey = key.substring(QueryUtil.GROUPING_LENGTH)
+			if(flattenedReduced.containsKey(newKey)) {
+				flattenedReduced(newKey) = flattenedReduced(newKey).reReduce(value)
+			} else {
+				flattenedReduced(newKey) = value.createOutputResult(output)
 			}
 		}
 
