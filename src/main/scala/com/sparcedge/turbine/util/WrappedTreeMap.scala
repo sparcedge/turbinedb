@@ -12,6 +12,14 @@ object WrappedTreeMap {
 // Revisit Generics
 class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
 
+	def get(key: K): Option[V] = {
+		if(treeMap.containsKey(key)) {
+			Some(treeMap.get(key))
+		} else {
+			None
+		}
+	}
+
 	def apply(key: K): V = {
 		treeMap.get(key)
 	}
@@ -51,6 +59,10 @@ class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
 
 	def tailMap(key: K): WrappedTreeMap[K,V] = {
 		WrappedTreeMap(treeMap.tailMap(key))
+	}
+
+	def subMap(sKey: K, eKey: K): WrappedTreeMap[K,V] = {
+		WrappedTreeMap(treeMap.subMap(sKey, eKey))
 	}
 
 	def size(): Int = {

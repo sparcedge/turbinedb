@@ -6,5 +6,6 @@ case class Blade(domain: String, tenant: String, category: String, period: Strin
 	val formatter = DateTimeFormat.forPattern("yyyy-MM")
 	val periodStart = formatter.parseDateTime(period)
 	val periodEnd = periodStart.plusMonths(1)
+	val key = toString()
 	override def toString() = domain + "." + tenant + "." + category + "." + period
 }

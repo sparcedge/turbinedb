@@ -3,41 +3,47 @@ package com.sparcedge.turbine.query
 import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
 import akka.dataflow._
+import akka.util.Timeout
+import akka.pattern.ask
 import scala.concurrent.{ExecutionContext,Await,Future}
 import scala.concurrent.duration._
 import scala.util.{Try,Success,Failure}
 import scala.collection.mutable
-import akka.util.Timeout
-import akka.pattern.ask
 import spray.routing.RequestContext
 import spray.http.{HttpResponse,HttpEntity,StatusCodes}
+import org.joda.time.format.DateTimeFormat
 
+import com.sparcedge.turbine.BladeManagerRepository
 import com.sparcedge.turbine.util.{WrappedTreeMap,CustomJsonSerializer}
 import com.sparcedge.turbine.data._
 
 object QueryHandler {
 
-	case class HandleQuery(query: TurbineQuery, bladeManager: ActorRef, ctx: RequestContext)
+	case class HandleQuery(extQuery: TurbineQueryPackage, ctx: RequestContext)
 
 }
 
 import AggregateIndex._
 import BladeManager._
 import QueryHandler._
+import BladeManagerRepository._
+import QueryUtil._
 
-class QueryHandler extends Actor {
+class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
 	implicit val timeout = Timeout(240 seconds)
 	implicit val ec: ExecutionContext = context.dispatcher 
+	val monthFmt = DateTimeFormat.forPattern("yyyy-MM")
 
 	var outCount = 0
 
 	def receive = {
-		case HandleQuery(tquery, bladeMan, ctx) =>
-			val query = tquery.query
+		case HandleQuery(queryPackage, ctx) =>
+			val query = queryPackage.query
 
 			// In the future!!!
-			val indexActors = requestIndexActors(bladeMan, tquery)
+			val bladeManagers = requestBladeManagers(queryPackage)
+			val indexActors = requestIndexActors(bladeManagers, query)
 			val indexes = retrieveIndexesFromActors(indexActors)
 			val combinedIndex = sliceFlattenAndCombineIndexes(indexes, query)
 			val jsonResult = convertCombinedIndexToJson(combinedIndex)
@@ -52,20 +58,40 @@ class QueryHandler extends Actor {
 		case _ =>
 	}
 
-	def requestIndexActors(bladeManager: ActorRef, query: TurbineQuery): Future[Iterable[ActorRef]] = {
-		(bladeManager ? IndexesRequest(query)).mapTo[IndexesResponse].map(_.indexes)
+	def requestBladeManagers(queryPackage: TurbineQueryPackage): Future[Iterable[ActorRef]] = {
+		val query = queryPackage.query
+		val sPeriod = monthFmt.print(query.range.start)
+		val ePeriodOpt = query.range.end.map(monthFmt.print)
+		val sBlade = Blade(queryPackage.domain, queryPackage.tenant, queryPackage.category, sPeriod)
+		
+		var msg = if(ePeriodOpt.isDefined) {
+			BladeManagerRangeRequest(sBlade, sBlade.copy(period = ePeriodOpt.get))
+		} else {
+			BladeManagerRangeUnboundedRequest(sBlade)
+		}
+
+		(bladeManagerRepository ? msg).mapTo[BladeManagerRangeResponse].map(_.managers.map(_._2))
+	}
+
+	def requestIndexActors(bladeManagers: Future[Iterable[ActorRef]], query: TurbineQuery): Future[Iterable[ActorRef]] = {
+		val indexActorResponses: Future[Iterable[IndexesResponse]] = bladeManagers flatMap { managers =>
+			Future.sequence (
+				managers.map(manager => (manager ? IndexesRequest(query)).mapTo[IndexesResponse])
+			)
+		}
+		indexActorResponses.map(responses => responses.flatMap(_.indexes))
 	}
 
 	def retrieveIndexesFromActors(indexActors: Future[Iterable[ActorRef]]): Future[Iterable[Index]] = {
 		val indexResponses: Future[Iterable[IndexResponse]] = indexActors flatMap { actors => 
 				Future.sequence ( 
-					actors.map (actor => (actor ? IndexRequest()).mapTo[IndexResponse])
+					actors.map(actor => (actor ? IndexRequest()).mapTo[IndexResponse])
 				)
 			}
 		indexResponses.map(responses => responses.map(res => res.index))
 	}
 
-	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: Query): Future[WrappedTreeMap[String,List[ReducedResult]]] = {
+	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery): Future[WrappedTreeMap[String,List[ReducedResult]]] = {
 		val sliced = indexes.map(idxs => idxs.map(sliceIndex(_, query)))
 		val flattened = sliced.map(idxs => idxs.map(removeHourGroupFlattendAndReduceAggregate(_, s"out-${nextCount()}")))
 		flattened.map(combineAggregates(_))
@@ -81,7 +107,7 @@ class QueryHandler extends Actor {
 		outCount
 	}
 
-	private def sliceIndex(indexVal: Index, query: Query): WrappedTreeMap[String,ReducedResult] = {
+	private def sliceIndex(indexVal: Index, query: TurbineQuery): WrappedTreeMap[String,ReducedResult] = {
 		var sliced = indexVal.index
 		val lowerBoundBroken = query.range.start > indexVal.blade.periodStart.getMillis
 		var upperBoundBroken = query.range.end != None && query.range.end.get < indexVal.blade.periodEnd.getMillis

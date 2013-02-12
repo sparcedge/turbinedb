@@ -7,21 +7,19 @@ import org.joda.time.format.DateTimeFormat
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
-object TurbineQuery {
+object TurbineQueryPackage {
 
 	implicit val formats = org.json4s.DefaultFormats
 
-	def apply(queryStr: String): TurbineQuery = {
+	def apply(queryStr: String): TurbineQueryPackage = {
 		val json = parse(queryStr)
-		json.extract[TurbineQuery]
+		json.extract[TurbineQueryPackage]
 	}
 }
 
-case class TurbineQuery(blade: Blade, query: Query)
+case class TurbineQueryPackage(domain: String, tenant: String, category: String, query: TurbineQuery)
 
-case class TurbineQueryExternal(domain: String, tenant: String, category: String, query: Query)
-
-case class Query (
+case class TurbineQuery (
 	category: String,
 	range: TimeRange,
 	`match`: Option[Map[String,JValue]],
@@ -30,11 +28,8 @@ case class Query (
 ) {
 	implicit val formats = org.json4s.DefaultFormats
 	val minuteFormatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
-	val startMinute = minuteFormatter.print(new DateTime(range.start))
 	val startPlusMinute = minuteFormatter.print(new DateTime(range.start).plusMinutes(1))
-	val startPlusMinuteDate = minuteFormatter.parseDateTime(startPlusMinute)
 	val endMinute = range.end.map { end: Long => minuteFormatter.print(new DateTime(end)) }
-	val endMinuteDate = endMinute.map(minuteFormatter.parseDateTime(_))
 	val orderedMatches = `match`.map(unorderedMatches => TreeMap(unorderedMatches.toArray:_*))
 
 	def createAggregateCacheString(reducer: Reducer): String = {
@@ -56,7 +51,6 @@ case class Query (
 	val matches = `match`.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
 		new Match(segment, value.extract[Map[String,JValue]])
 	}
-	lazy val requiredFields = retrieveRequiredFields()
 	val groupings = group.getOrElse(List[Grouping]())
 }
 

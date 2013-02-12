@@ -42,11 +42,11 @@ class BladeManager(blade: Blade) extends Actor {
 	}
 
 	def retrieveIndexKeysFromQuery(query: TurbineQuery): Iterable[IndexKey] = {
-		val reducers = query.query.reduce match {
+		val reducers = query.reduce match {
 			case Some(reduce) => reduce.reducerList
 			case None => List[Reducer]()
 		}
-		reducers.map(query.query.createAggregateIndexKey(_))
+		reducers.map(query.createAggregateIndexKey(_))
 	}
 
 	def createAggregateIndex(key: IndexKey, newIndexes: mutable.ListBuffer[Index]): ActorRef = {

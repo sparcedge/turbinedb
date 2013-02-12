@@ -37,6 +37,7 @@ class DataPartition(val blade: Blade) {
 		eventCount += 1
 	}
 
+	// TODO: Include ITS
 	def writeEventToSegmentFiles(event: Event, segmentOutStreamMap: Map[String,BufferedOutputStream]) {
 		segmentOutStreamMap foreach { case (segment, outStream) =>
 			if(segment == "ts") {
@@ -86,7 +87,6 @@ class DataPartition(val blade: Blade) {
 		}
 	}
 
-	// TODO: Remove and complete invalid indexes
 	def populateIndexes(indexes: Iterable[Index]) {
 		val keys = indexes.map(_.indexKey)
 		val reqSegments = retrieveRequiredSegments(keys)
