@@ -9,7 +9,7 @@ import com.sparcedge.turbine.util.{Timer,WrappedTreeMap}
 object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
-	val GROUPING_LENGTH = 5 // Mod 100000
+	val GROUPING_LENGTH = 5 // 100000
 	val aggregateGrouping = Grouping("duration", Some("ihour"))
 
 	def eventMatchesAllCriteria(event: Event, matches: Iterable[Match]): Boolean = {

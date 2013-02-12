@@ -1,10 +1,10 @@
 package com.sparcedge.turbine.data
 
 import scala.collection.mutable
-import com.sparcedge.turbine.query.Grouping
+import com.sparcedge.turbine.query.{Grouping,Blade}
 import QueryUtil._
 
-class GroupStringBuilder(dataGrouping: Grouping, groupings: Iterable[Grouping]) {
+class GroupStringBuilder(dataGrouping: Grouping, groupings: Iterable[Grouping], blade: Blade) {
 
 	val grpArr = groupings.toArray
 	val grpValues = new Array[String](grpArr.length)
@@ -13,7 +13,7 @@ class GroupStringBuilder(dataGrouping: Grouping, groupings: Iterable[Grouping]) 
 
 	def applyTimestamp(ts: Long) {
 		val grpIndex = grpIndexMap.getOrElseUpdate("ts", -1)
-		dataGrpValue = dataGrouping(ts)
+		dataGrpValue = dataGrouping(ts, blade.periodStartMS)
 
 		if(grpIndex >= 0) {
 			val grp = grpArr(grpIndex)

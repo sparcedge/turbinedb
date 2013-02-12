@@ -100,7 +100,7 @@ class DataPartition(val blade: Blade) {
 		val matches = indexes.head.indexKey.matches
 		val groupings = indexes.head.indexKey.groupings
 		val matchBuilder = new MatchBuilder(matches)
-		val groupStrBuilder = new GroupStringBuilder(aggregateGrouping, groupings)
+		val groupStrBuilder = new GroupStringBuilder(aggregateGrouping, groupings, blade)
 		val indexUpdateBuilder = new IndexUpdateBuilder(indexes)
 		val segmentBuffers = createSegmentBuffers(segments.toList) 
 		val tsBuffer = new SegmentBuffer("ts", blade)

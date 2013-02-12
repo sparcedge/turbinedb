@@ -3,7 +3,7 @@ package com.sparcedge.turbine.util
 object CrazierDateUtil {
 
 	val MILLIS_PER_SECOND = 1000L
-	val MILLIS_PER_MINUTE = 6000L
+	val MILLIS_PER_MINUTE = 60000L
 	val MILLIS_PER_HOUR = 3600000L
 	val MILLIS_PER_DAY = 86400000L
 	val MILLIS_PER_YEAR = (365.2425 * MILLIS_PER_DAY).toLong
@@ -41,12 +41,12 @@ object CrazierDateUtil {
 		}
 	}
 
-	def calculateAbsoluteMinute(ms: Long): Long = {
-		ms / MILLIS_PER_MINUTE
+	def calculateAbsoluteMinuteForMonth(ms: Long, monthStart: Long): Long = {
+		((ms - monthStart) / MILLIS_PER_MINUTE) + 100000
 	}
 
-	def calculateAbsoluteHour(ms: Long): Long = {
-		ms / MILLIS_PER_HOUR
+	def calculateAbsoluteHourForMonth(ms: Long, monthStart: Long): Long = {
+		((ms - monthStart) / MILLIS_PER_HOUR) + 100000
 	}
 
 	def calculateYearCombined(ms: Long): Long = {

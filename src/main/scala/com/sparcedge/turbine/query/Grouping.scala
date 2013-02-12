@@ -18,6 +18,17 @@ case class Grouping (`type`: String, value: Option[String]) {
 		case "segment" => Some(value.get)
 	}
 
+	def apply(ts: Long, monthStart: Long): String = {
+		val duration = value.get
+		if(duration == "ihour") {
+			(calculateAbsoluteHourForMonth(ts, monthStart) % 100000).toString
+		} else if(duration == "iminute") {
+			(calculateAbsoluteMinuteForMonth(ts, monthStart) % 100000).toString
+		} else {
+			throw new Exception("Invalid Duration Value")	
+		}
+	}
+
 	def apply(ts: Long): String = {
 		if(`type` != "duration") {
 			throw new Exception(s"Only use timestamp with duration grouping! Found: ${`type`}")
@@ -45,10 +56,6 @@ case class Grouping (`type`: String, value: Option[String]) {
 			calculateHourCombined(ts).toString
 		} else if(duration == "minute") {
 			calculateMinuteCombined(ts).toString
-		} else if(duration == "ihour") {
-			(calculateAbsoluteHour(ts) % 100000).toString
-		} else if(duration == "iminute") {
-			(calculateAbsoluteHour(ts) % 100000).toString
 		} else {
 			throw new Exception("Invalid Duration Value")
 		}
