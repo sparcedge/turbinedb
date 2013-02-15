@@ -33,15 +33,20 @@ class DataPartition(val blade: Blade) {
 			addNewSegments(eventSegments)
 		
 		val segmentOutStreamMap = createSegmentOutputStreamMap(eventSegments)
-		writeEventToSegmentFiles(event, segmentOutStreamMap)
-		eventCount += 1
+		try {
+			writeEventToSegmentFiles(event, segmentOutStreamMap)
+			eventCount += 1
+		} finally {
+			segmentOutStreamMap.values.foreach { stream => stream.close() }
+		}
 	}
 
-	// TODO: Include ITS
-	def writeEventToSegmentFiles(event: Event, segmentOutStreamMap: Map[String,BufferedOutputStream]) {
+	def writeEventToSegmentFiles(event: Event, segmentOutStreamMap: mutable.Map[String,BufferedOutputStream]) {
 		segmentOutStreamMap foreach { case (segment, outStream) =>
 			if(segment == "ts") {
 				outStream.write(bytes(event.ts))
+			} else if(segment == "its") {
+				outStream.write(bytes(event.its))
 			} else {
 				writeEventSegment(event, segment, outStream)
 			}
@@ -63,12 +68,14 @@ class DataPartition(val blade: Blade) {
 		(event.dblValues.keySet ++ event.strValues.keySet) + "ts" + "its"
 	}
 
-	def createSegmentOutputStreamMap(segments: Iterable[String]): Map[String,BufferedOutputStream] = {
-		segments.map { segment =>
-			segment -> (new BufferedOutputStream (
+	def createSegmentOutputStreamMap(segments: Iterable[String]): mutable.Map[String,BufferedOutputStream] = {
+		val outStreamMap = mutable.Map[String,BufferedOutputStream]()
+		segments.foreach { segment =>
+			outStreamMap(segment) = new BufferedOutputStream ( 
 				new FileOutputStream(getDataFileNameForBladeSegment(blade, segment), true), 128 * 100
-			))
-		}.toMap
+			)
+		}
+		outStreamMap
 	}
 
 	def writeEventSegment(event: Event, segment: String, outStream: BufferedOutputStream) {

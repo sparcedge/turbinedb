@@ -11,13 +11,13 @@ import MediaTypes._
 
 import com.sparcedge.turbine.TurbineManager._
 
-class TurbineHttpServiceActor(val bladeManager: ActorRef) extends Actor with TurbineHttpService {
+class TurbineHttpServiceActor(val turbineManager: ActorRef) extends Actor with TurbineHttpService {
 	def actorRefFactory = context
 	def receive = runRoute(turbineRoute)
 }
 
 trait TurbineHttpService extends HttpService {
-	val bladeManager: ActorRef
+	val turbineManager: ActorRef
 
 	val turbineRoute = {
 		path("") {
@@ -31,7 +31,17 @@ trait TurbineHttpService extends HttpService {
 			post {	
 				entity(as[String]) { rawQuery =>
 					respondWithMediaType(`application/json`) { ctx =>
-						bladeManager ! QueryDispatchRequest(rawQuery, ctx)
+						turbineManager ! QueryDispatchRequest(rawQuery, ctx)
+					}
+				}
+			}
+		} ~
+		path("events") {
+			post {
+				entity(as[String]) { rawEvent =>
+					respondWithMediaType(`application/json`) { ctx =>
+						turbineManager ! AddEventRequest(rawEvent)
+						ctx.complete(""" {"ok": true} """)
 					}
 				}
 			}

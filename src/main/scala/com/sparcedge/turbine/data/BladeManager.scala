@@ -7,16 +7,14 @@ import com.sparcedge.turbine.event.Event
 import scala.util.Random
 
 object BladeManager {
-
 	case class IndexesRequest(query: TurbineQuery)
-
 	case class IndexesResponse(indexes: Iterable[ActorRef])
-
 	case class AddEvent(event: Event)
 }
 
 import BladeManager._
 import DataPartitionManager._
+import AggregateIndex._
 
 class BladeManager(blade: Blade) extends Actor {
 
@@ -40,6 +38,8 @@ class BladeManager(blade: Blade) extends Actor {
 			sender ! IndexesResponse(indexes)
 		case AddEvent(event) =>
 			partitionManager ! WriteEvent(event)
+			// TODO: Efficiency
+			indexMap.values.foreach(_ ! UpdateIndex(event))
 	}
 
 	def retrieveIndexKeysFromQuery(query: TurbineQuery): Iterable[IndexKey] = {

@@ -7,12 +7,13 @@ import com.sparcedge.turbine.data.BladeManager
 import com.sparcedge.turbine.util.{WrappedTreeMap,Timer,DiskUtil}
 
 object BladeManagerRepository {
-
 	case class BladeManagerRangeRequest(sBlade: Blade, eBlade: Blade)
 	case class BladeManagerRangeUnboundedRequest(sBlade: Blade)
 	case class BladeManagerRequest(blade: Blade)
+	case class BladeManagerGetOrCreateRequest(blade: Blade)
 	case class BladeManagerRangeResponse(managers: Iterable[(Blade,ActorRef)])
 	case class BladeManagerResponse(manager: Option[ActorRef])
+	case class BladeManagerGetOrCreateResponse(manager: ActorRef)
 }
 
 import BladeManagerRepository._
@@ -24,6 +25,9 @@ class BladeManagerRepository(preloadBlades: Iterable[Blade]) extends Actor {
 	def receive = {
 		case BladeManagerRequest(blade) =>
 			sender ! BladeManagerResponse(bladeManagerMap.get(blade.key).map(_._2))
+		case BladeManagerGetOrCreateRequest(blade) =>
+			val (newBlade,manager) = bladeManagerMap.getOrElseUpdate(blade.key, (blade -> createManagerForBlade(blade)))
+			sender ! BladeManagerGetOrCreateResponse(manager)
 		case BladeManagerRangeRequest(sBlade, eBlade) =>
 			sender ! BladeManagerRangeResponse(getBladeManagersInRange(sBlade, eBlade))
 		case BladeManagerRangeUnboundedRequest(sBlade) =>

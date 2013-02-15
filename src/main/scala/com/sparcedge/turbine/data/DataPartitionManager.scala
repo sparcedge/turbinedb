@@ -7,9 +7,7 @@ import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.query.{Blade,Match,Grouping}
 
 object DataPartitionManager {
-
 	case class WriteEvent(event: Event)
-
 	case class PopulateIndexesRequest(indexes: Iterable[Index])
 }
 

@@ -2,7 +2,6 @@ package com.sparcedge.turbine.query
 
 import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
-import akka.dataflow._
 import akka.util.Timeout
 import akka.pattern.ask
 import scala.concurrent.{ExecutionContext,Await,Future}
@@ -18,9 +17,7 @@ import com.sparcedge.turbine.util.{WrappedTreeMap,CustomJsonSerializer}
 import com.sparcedge.turbine.data._
 
 object QueryHandler {
-
 	case class HandleQuery(extQuery: TurbineQueryPackage, ctx: RequestContext)
-
 }
 
 import AggregateIndex._

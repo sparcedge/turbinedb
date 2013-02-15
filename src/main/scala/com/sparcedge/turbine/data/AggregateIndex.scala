@@ -9,7 +9,6 @@ import scala.collection.mutable
 import QueryUtil._
 
 object AggregateIndex {
-
 	case class AllClear()
 	case class UpdateIndex(event: Event)
 	case class IndexRequest()
@@ -38,7 +37,7 @@ class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with Stash 
   	}
 
 	def initializedReceive: Receive = {
-		case event: Event =>
+		case UpdateIndex(event) =>
 			updateIndex(event)
 		case IndexRequest() =>
 			sender ! IndexResponse(index)
