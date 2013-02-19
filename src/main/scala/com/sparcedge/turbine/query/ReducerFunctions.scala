@@ -4,23 +4,10 @@ import com.sparcedge.turbine.event.Event
 
 object ReducerFunctions {
 
-	def MAX(segment: String, events: Iterable[Event]): ReducedResult = {
-		val numerics = retrieveNumericsForSegment(events, segment)
-		val size = numerics.size
-		val max = if(size > 0) numerics.max else 0
-		new ReducedResult(segment, "max", None, max, size)
-	}
-
-	def MAX_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
-		val max = results.map(_.value).max
-		val count = results.map(_.count).sum
-		new ReducedResult(results.head.segment, "max", None, max, count)
-	}
-
-	def MAX_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+	def MAX_REREDUCE(res1: ReducedResult, res2: ReducedResult): (Double,Int) = {
 		val max = if (res1.value > res2.value) res1.value else res2.value
 		val count = res1.count + res2.count
-		new ReducedResult(res1.segment, "max", res1.output, max, count)
+		(max,count)
 	}
 
 	def MAX_STREAMING(prevValue: Double, count: Int, value: Double): (Double,Int) = {
@@ -28,47 +15,21 @@ object ReducerFunctions {
 		(newValue,count+1)
 	}
 
-	def MIN(segment: String, events: Iterable[Event]): ReducedResult = {
-		val numerics = retrieveNumericsForSegment(events, segment)
-		val size = numerics.size
-		val min = if(size > 0) numerics.min else 0
-		new ReducedResult(segment, "min", None, min, size)
-	}
-
-	def MIN_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
-		val min = results.map(_.value).min
-		val count = results.map(_.count).sum
-		new ReducedResult(results.head.segment, "min", None, min, count)	
-	}
-
-	def MIN_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+	def MIN_REREDUCE(res1: ReducedResult, res2: ReducedResult): (Double,Int) = {
 		val min = if (res1.value < res2.value) res1.value else res2.value
 		val count = res1.count + res2.count
-		new ReducedResult(res1.segment, "min", res1.output, min, count)	
+		(min,count)
 	}
 
 	def MIN_STREAMING(prevValue: Double, count: Int, value: Double): (Double,Int) = {
 		val newValue = if(count == 0 || value < prevValue) value else prevValue
-		(newValue, count+1)
+		(newValue,count+1)
 	}
 
-	def SUM(segment: String, events: Iterable[Event]): ReducedResult = {
-		val numerics = retrieveNumericsForSegment(events, segment)
-		val size = numerics.size
-		val sum = if(size > 0) numerics.sum else 0
-		new ReducedResult(segment, "sum", None, sum, size)
-	}
-
-	def SUM_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
-		val sum = results.map(_.value).sum
-		val count = results.map(_.count).sum
-		new ReducedResult(results.head.segment, "sum", None, sum, count)
-	}
-
-	def SUM_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+	def SUM_REREDUCE(res1: ReducedResult, res2: ReducedResult): (Double,Int) = {
 		val sum = res1.value + res2.value
 		val count = res1.count + res2.count
-		new ReducedResult(res1.segment, "sum", res1.output, sum, count)
+		(sum,count)
 	}
 
 	def SUM_STREAMING(prevValue: Double, count: Int, value: Double): (Double,Int) = {
@@ -76,25 +37,11 @@ object ReducerFunctions {
 		(newValue, count+1)
 	}
 
-	def AVG(segment: String, events: Iterable[Event]): ReducedResult = {
-		val numerics = retrieveNumericsForSegment(events, segment)
-		val size = numerics.size
-		val average = if (numerics.size > 0) numerics.sum / size else 0
-		new ReducedResult(segment, "avg", None, average, size)
-	}
-
-	def AVG_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
-		val sum = results.map(res => res.value * res.count).sum
-		val totalCount = results.map(_.count).sum
-		val newValue = if(totalCount > 0) sum / totalCount else 0
-		new ReducedResult(results.head.segment, "avg", None, newValue, totalCount)
-	}
-
-	def AVG_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+	def AVG_REREDUCE(res1: ReducedResult, res2: ReducedResult): (Double,Int) = {
 		val sum = (res1.value * res1.count) + (res2.value * res2.count)
 		val totalCount = res1.count + res2.count
 		val newValue = if(totalCount > 0) sum / totalCount else 0
-		new ReducedResult(res1.segment, "avg", res1.output, newValue, totalCount)
+		(newValue,totalCount)
 	}
 
 	def AVG_STREAMING(prevValue: Double, count: Int, value: Double): (Double,Int) = {
@@ -103,20 +50,9 @@ object ReducerFunctions {
 		(newValue, newCount)
 	}
 
-	def COUNT(segment: String, events: Iterable[Event]): ReducedResult = {
-		val properties = unboxOptions(events.map(_(segment)))
-		val size = properties.size
-		new ReducedResult(segment, "count", None, size.toDouble, size)
-	}
-
-	def COUNT_REREDUCE(results: Iterable[ReducedResult]): ReducedResult = {
-		val count = results.map(_.count).sum
-		new ReducedResult(results.head.segment, "count", None, count, count)
-	}
-
-	def COUNT_REREDUCE(res1: ReducedResult, res2: ReducedResult): ReducedResult = {
+	def COUNT_REREDUCE(res1: ReducedResult, res2: ReducedResult): (Double,Int) = {
 		val count =  res1.count + res2.count
-		new ReducedResult(res1.segment, "count", res1.output, count, count)
+		(count,count)
 	}
 
 	def COUNT_STREAMING(prevValue: Double, count: Int, value: Double): (Double,Int) = {
@@ -143,5 +79,4 @@ object ReducerFunctions {
 				None
 	    }
 	}
-
 }

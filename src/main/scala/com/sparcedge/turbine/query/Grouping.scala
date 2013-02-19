@@ -21,9 +21,9 @@ case class Grouping (`type`: String, value: Option[String]) {
 	def apply(ts: Long, monthStart: Long): String = {
 		val duration = value.get
 		if(duration == "ihour") {
-			(calculateAbsoluteHourForMonth(ts, monthStart) % 100000).toString
+			(calculateAbsoluteHourForMonth(ts, monthStart) | 100000).toString
 		} else if(duration == "iminute") {
-			(calculateAbsoluteMinuteForMonth(ts, monthStart) % 100000).toString
+			(calculateAbsoluteMinuteForMonth(ts, monthStart) | 100000).toString
 		} else {
 			throw new Exception("Invalid Duration Value")	
 		}

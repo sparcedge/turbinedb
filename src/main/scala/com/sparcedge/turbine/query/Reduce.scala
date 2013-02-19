@@ -3,18 +3,6 @@ package com.sparcedge.turbine.query
 import com.sparcedge.turbine.event.Event
 import org.json4s.JsonAST._
 
-object Reduce {
-	def reReduce(results: Iterable[ReducedResult]): ReducedResult = {
-		results.head.reducer match {
-			case "max" => ReducerFunctions.MAX_REREDUCE(results)
-			case "min" => ReducerFunctions.MIN_REREDUCE(results)
-			case "avg" => ReducerFunctions.AVG_REREDUCE(results)
-			case "sum" => ReducerFunctions.SUM_REREDUCE(results)
-			case "count" => ReducerFunctions.COUNT_REREDUCE(results)
-		}
-	}
-}
-
 class Reduce (reducers: Option[List[Reducer]], filter: Option[Map[String,JObject]]) {
 
 	implicit val formats = org.json4s.DefaultFormats
@@ -27,16 +15,6 @@ class Reduce (reducers: Option[List[Reducer]], filter: Option[Map[String,JObject
 
 case class Reducer (propertyName: String, reducer: String, segment: String) {
 
-	def createReduceFunction(): (Iterable[Event]) => ReducedResult = {
-	    reducer match {
-			case "max" => ReducerFunctions.MAX(segment, _:Iterable[Event])
-			case "min" => ReducerFunctions.MIN(segment, _:Iterable[Event])
-			case "avg" => ReducerFunctions.AVG(segment, _:Iterable[Event])
-			case "sum" => ReducerFunctions.SUM(segment, _:Iterable[Event])
-			case "count" => ReducerFunctions.COUNT(segment, _:Iterable[Event])
-	    }
-	}
-
 	def createReducedResult(): ReducedResult = {
 		new ReducedResult(segment, reducer, Some(propertyName))
 	}
@@ -44,8 +22,6 @@ case class Reducer (propertyName: String, reducer: String, segment: String) {
 	def getCoreReducer(): CoreReducer = {
 		CoreReducer(reducer, segment)
 	}
-
-	val reduceFunction = createReduceFunction()
 }
 
 case class CoreReducer (reducer: String, segment: String) {
@@ -91,7 +67,7 @@ class ReducedResult (val segment: String, val reducer: String, var output: Optio
 	def apply(str: String) {
 		if(reducer == "count") {
 			value += 1
-			count += 1
+			count += 1			
 		}
 	}
 
@@ -99,8 +75,10 @@ class ReducedResult (val segment: String, val reducer: String, var output: Optio
 		// TODO: Shouldn't -- Handle It
 	}
 
-	def reReduce(other: ReducedResult): ReducedResult = {
-		reReduceFunction(other)
+	def reReduce(other: ReducedResult) = {
+		val (newValue,newCount) = reReduceFunction(other)
+		value = newValue
+		count = newCount
 	}
 
 	def createOutputResult(out: String): ReducedResult = {

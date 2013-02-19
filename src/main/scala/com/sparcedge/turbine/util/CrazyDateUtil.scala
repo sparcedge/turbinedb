@@ -1,12 +1,10 @@
 package com.sparcedge.turbine.util
 
 import org.joda.time.chrono.ISOChronology
-import org.joda.time.format.DateTimeFormat
 
 object CrazyDateUtil {
 
 	val chronology = ISOChronology.getInstanceUTC()
-	val formatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH")
 
 	val yearCalc = chronology.years()
 	val monthCalc = chronology.monthOfYear()

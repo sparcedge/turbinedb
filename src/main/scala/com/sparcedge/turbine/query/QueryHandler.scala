@@ -127,7 +127,7 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		aggregate foreach { case (key,value) =>
 			val newKey = key.substring(QueryUtil.GROUPING_LENGTH)
 			if(flattenedReduced.containsKey(newKey)) {
-				flattenedReduced(newKey) = flattenedReduced(newKey).reReduce(value)
+				flattenedReduced(newKey).reReduce(value)
 			} else {
 				flattenedReduced(newKey) = value.createOutputResult(output)
 			}
@@ -141,7 +141,12 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		aggregates foreach { aggregate =>
 			aggregate foreach { case (key,value) =>
 				val results = combined.getOrElseUpdate(key, List[ReducedResult]())
-				combined(key) = (value :: results)
+				val resOpt = results.find(r => r.segment == value.segment && r.reducer == value.reducer)
+				if(resOpt.isDefined) {
+					resOpt.get.reReduce(value)
+				} else {
+					combined(key) = (value :: results)
+				}
 			}
 		}
 		combined
