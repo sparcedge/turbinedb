@@ -12,7 +12,7 @@ object EventPackage {
 	implicit val formats = org.json4s.DefaultFormats
 	val formatter = DateTimeFormat.forPattern("yyyy-MM")
 
-	def apply(eventJson: String): EventPackage = {
+	def unmarshall(eventJson: String): EventPackage = {
 		val json = parse(eventJson)
 		val eiPackage = json.extract[EventIngressPackage]
 		val event = convertIngressEventToEvent(eiPackage.event)

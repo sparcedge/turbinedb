@@ -11,7 +11,7 @@ object TurbineQueryPackage {
 
 	implicit val formats = org.json4s.DefaultFormats
 
-	def apply(queryStr: String): TurbineQueryPackage = {
+	def unmarshall(queryStr: String): TurbineQueryPackage = {
 		val json = parse(queryStr)
 		json.extract[TurbineQueryPackage]
 	}

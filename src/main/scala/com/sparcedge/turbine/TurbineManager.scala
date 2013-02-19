@@ -1,8 +1,10 @@
 package com.sparcedge.turbine
 
+import scala.util.{Try,Success,Failure}
 import akka.actor.{Actor,Props,ActorSystem,ActorRef}
 import akka.routing.RoundRobinRouter
 import spray.routing.RequestContext
+import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 
 import com.sparcedge.turbine.event.EventPackage
 import com.sparcedge.turbine.data.{BladeManager,WriteHandler}
@@ -31,11 +33,21 @@ class TurbineManager(preloadBlades: List[Blade]) extends Actor {
 
 	def receive = {
 		case QueryDispatchRequest(rawQuery, ctx) =>
-			val queryPackage = TurbineQueryPackage(rawQuery)
-			queryHandlerRouter ! HandleQuery(queryPackage, ctx)
+			Try(TurbineQueryPackage.unmarshall(rawQuery)) match {
+				case Success(queryPackage) =>
+					queryHandlerRouter ! HandleQuery(queryPackage, ctx)
+				case Failure(err) =>
+					err.printStackTrace()
+					ctx.complete(HttpResponse(StatusCodes.InternalServerError))
+			}
 		case AddEventRequest(rawEvent) =>
-			val eventPkg = EventPackage(rawEvent)
-			writeHandlerRouter ! WriteEventRequest(eventPkg)
+			Try(EventPackage.unmarshall(rawEvent)) match {
+				case Success(eventPkg) =>
+					writeHandlerRouter ! WriteEventRequest(eventPkg)
+				case Failure(err) =>
+					err.printStackTrace()
+					//ctx.complete(HttpResponse(StatusCodes.InternalServerError))
+			}
 		case _ =>
 	}
 }
