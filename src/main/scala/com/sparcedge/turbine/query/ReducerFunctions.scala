@@ -58,25 +58,4 @@ object ReducerFunctions {
 	def COUNT_STREAMING(prevValue: Double, count: Int, value: Double): (Double,Int) = {
 		(prevValue+1,count+1)
 	}
-
-	def retrieveNumericsForSegment(events: Iterable[Event], segment: String): Iterable[Double] = {
-		unboxOptions(events.map(_(segment)).map(convertNumeric(_)))
-	}
-
-	def unboxOptions[T<:Any](options: Iterable[Option[T]]): Iterable[T] = {
-		options.filter(_ != None).map(_.get)
-	}
-
-	def convertNumeric(maybeNumeric: Option[Any]): Option[Double] = {
-	    maybeNumeric match {
-			case Some(x: Int) =>
-				Some(x.toDouble)
-			case Some(x: Double) =>
-				Some(x)
-			case Some(x: Long) =>
-				Some(x.toDouble)
-			case _ =>
-				None
-	    }
-	}
 }
