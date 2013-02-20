@@ -90,7 +90,7 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		indexResponses.map(responses => responses.map(res => res.index))
 	}
 
-	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery, outMap: Map[(String,String),String]): Future[WrappedTreeMap[String,List[ReducedResult]]] = {
+	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery, outMap: Map[(String,String),String]): Future[WrappedTreeMap[String,List[OutputResult]]] = {
 		val sliced = indexes.map(idxs => idxs.map(idx => (idx -> sliceIndex(idx, query))))
 		val flattened = sliced.map(idxs => idxs.map { case (idx, agg) => removeHourGroupFlattendAndReduceAggregate(agg, retrieveOutputParameter(idx, outMap)) })
 		flattened.map(combineAggregates(_))
@@ -103,7 +103,7 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		outMap((segment,reducerType))
 	}
 
-	def convertCombinedIndexToJson(combined: Future[WrappedTreeMap[String,List[ReducedResult]]]): Future[String] = {
+	def convertCombinedIndexToJson(combined: Future[WrappedTreeMap[String,List[OutputResult]]]): Future[String] = {
 		combined.map(CustomJsonSerializer.serializeAggregateGroupMap(_))
 	}
 
@@ -122,25 +122,25 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		sliced
 	}
 
-	def removeHourGroupFlattendAndReduceAggregate(aggregate: WrappedTreeMap[String,ReducedResult], output: String): WrappedTreeMap[String,ReducedResult] = {
-		var flattenedReduced = new WrappedTreeMap[String,ReducedResult]()
+	def removeHourGroupFlattendAndReduceAggregate(aggregate: WrappedTreeMap[String,ReducedResult], output: String): WrappedTreeMap[String,OutputResult] = {
+		var flattenedReduced = new WrappedTreeMap[String,OutputResult]()
 		aggregate foreach { case (key,value) =>
 			val newKey = key.substring(QueryUtil.GROUPING_LENGTH)
 			if(flattenedReduced.containsKey(newKey)) {
 				flattenedReduced(newKey).reReduce(value)
 			} else {
-				flattenedReduced(newKey) = value.createOutputResult(output)
+				flattenedReduced(newKey) = value.copyForOutput(output)
 			}
 		}
 
 		flattenedReduced
 	}
 
-	def combineAggregates(aggregates: Iterable[WrappedTreeMap[String,ReducedResult]]): WrappedTreeMap[String,List[ReducedResult]] = {
-		var combined = new WrappedTreeMap[String,List[ReducedResult]]()
+	def combineAggregates(aggregates: Iterable[WrappedTreeMap[String,OutputResult]]): WrappedTreeMap[String,List[OutputResult]] = {
+		var combined = new WrappedTreeMap[String,List[OutputResult]]()
 		aggregates foreach { aggregate =>
 			aggregate foreach { case (key,value) =>
-				val results = combined.getOrElseUpdate(key, List[ReducedResult]())
+				val results = combined.getOrElseUpdate(key, List[OutputResult]())
 				val resOpt = results.find(r => r.segment == value.segment && r.reducer == value.reducer)
 				if(resOpt.isDefined) {
 					resOpt.get.reReduce(value)

@@ -2,11 +2,11 @@ package com.sparcedge.turbine.util
 
 import scala.collection.GenMap
 import com.sparcedge.turbine.data.QueryUtil
-import com.sparcedge.turbine.query.ReducedResult
+import com.sparcedge.turbine.query.OutputResult
 
 object CustomJsonSerializer {
 
-	def serializeAggregateGroupMap(aggregateMap: WrappedTreeMap[String,List[ReducedResult]]): String = {		
+	def serializeAggregateGroupMap(aggregateMap: WrappedTreeMap[String,List[OutputResult]]): String = {		
 		serializeGroupMap(aggregateMap, serializeReducedResults, serializeReducedResultsMeta)
 	}
 
@@ -21,9 +21,7 @@ object CustomJsonSerializer {
 			addJsonElementDiff(prevElements, currElements, jsonBuilder)
 			jsonBuilder.append("{\"data\":[{")
 			jsonBuilder.append(valueSerializer(values))
-			jsonBuilder.append("}],\"meta\":{")
-			jsonBuilder.append(metaSerializer(values))
-			jsonBuilder.append("}}")
+			jsonBuilder.append("}]}")
 			prevElements = currElements
 		}
 
@@ -58,11 +56,11 @@ object CustomJsonSerializer {
 		}
 	}
 
-	private def serializeReducedResultsMeta(reducedResults: Iterable[ReducedResult]): String = {
-		reducedResults.map(result => "\"" + result.output.get + "-count\":" + result.count).mkString(",")
+	private def serializeReducedResultsMeta(reducedResults: Iterable[OutputResult]): String = {
+		reducedResults.map(result => "\"" + result.output + "-count\":" + result.count).mkString(",")
 	}
 
-	private def serializeReducedResults(reducedResults: Iterable[ReducedResult]): String = {
-		reducedResults.map(result => "\"" + result.output.get + "\":" + result.value).mkString(",")
+	private def serializeReducedResults(reducedResults: Iterable[OutputResult]): String = {
+		reducedResults.map(result => "\"" + result.output + "\":" + result.getResultValue).mkString(",")
 	}
 }

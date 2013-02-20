@@ -14,11 +14,6 @@ class Reduce (reducers: Option[List[Reducer]], filter: Option[Map[String,JObject
 }
 
 case class Reducer (propertyName: String, reducer: String, segment: String) {
-
-	def createReducedResult(): ReducedResult = {
-		new ReducedResult(segment, reducer, Some(propertyName))
-	}
-
 	def getCoreReducer(): CoreReducer = {
 		CoreReducer(reducer, segment)
 	}
@@ -26,62 +21,12 @@ case class Reducer (propertyName: String, reducer: String, segment: String) {
 
 case class CoreReducer (reducer: String, segment: String) {
 	def createReducedResult(): ReducedResult = {
-		new ReducedResult(segment, reducer, None)
-	}
-}
-
-// TODO: Remove Tuples!!
-class ReducedResult (val segment: String, val reducer: String, var output: Option[String], var value: Double = 0.0, var count: Int = 0) {
-
-	val streamingReduceFunction = reducer match {
-		case "max" => ReducerFunctions.MAX_STREAMING(_:Double, _:Int, _:Double)
-		case "min" => ReducerFunctions.MIN_STREAMING(_:Double, _:Int, _:Double)
-		case "avg" => ReducerFunctions.AVG_STREAMING(_:Double, _:Int, _:Double)
-		case "sum" => ReducerFunctions.SUM_STREAMING(_:Double, _:Int, _:Double)
-		case "count" => ReducerFunctions.COUNT_STREAMING(_:Double, _:Int, _:Double)
-	}
-
-	val reReduceFunction = reducer match {
-		case "max" => ReducerFunctions.MAX_REREDUCE(this, _:ReducedResult)
-		case "min" => ReducerFunctions.MIN_REREDUCE(this, _:ReducedResult)
-		case "avg" => ReducerFunctions.AVG_REREDUCE(this, _:ReducedResult)
-		case "sum" => ReducerFunctions.SUM_REREDUCE(this, _:ReducedResult)
-		case "count" => ReducerFunctions.COUNT_REREDUCE(this, _:ReducedResult)
-	}
-
-	def apply(event: Event) {
-		val dblOpt = event.getDouble(segment)
-		if(!dblOpt.isEmpty) {
-			val (newValue,newCount) = streamingReduceFunction(value, count, dblOpt.get)
-			value = newValue
-			count = newCount
+		reducer match {
+			case "max" => new MaxReducedResult(segment)
+			case "min" => new MinReducedResult(segment)
+			case "avg" => new AvgReducedResult(segment)
+			case "sum" => new SumReducedResult(segment)
+			case "count" => new CountReducedResult(segment)
 		}
-	}
-
-	def apply(numeric: Double) {
-		val (newValue,newCount) = streamingReduceFunction(value, count, numeric)
-		value = newValue
-		count = newCount
-	}
-
-	def apply(str: String) {
-		if(reducer == "count") {
-			value += 1
-			count += 1			
-		}
-	}
-
-	def apply(ts: Long) {
-		// TODO: Shouldn't -- Handle It
-	}
-
-	def reReduce(other: ReducedResult) = {
-		val (newValue,newCount) = reReduceFunction(other)
-		value = newValue
-		count = newCount
-	}
-
-	def createOutputResult(out: String): ReducedResult = {
-		new ReducedResult(segment, reducer, Some(out), value, count)
 	}
 }
