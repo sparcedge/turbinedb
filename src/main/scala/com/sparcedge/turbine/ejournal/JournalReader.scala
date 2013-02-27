@@ -13,6 +13,7 @@ import com.sparcedge.turbine.data.WriteHandler
 
 object JournalReader {
 	case class EventWrittenToDisk(id: String)
+	case class EventsWrittenToDisk(ids: Iterable[String])
 	case object ProcessJournalEvents
 }
 
@@ -32,6 +33,11 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 		case EventWrittenToDisk(id) =>
 			removeEventFromJournal(id)
 			processedAndAcknowledged += 1
+		case EventsWrittenToDisk(ids) =>
+			ids foreach {id =>
+				removeEventFromJournal(id)
+				processedAndAcknowledged += 1
+			}
 		case ProcessJournalEvents =>
 			processJournalEvents()
 		case _ =>

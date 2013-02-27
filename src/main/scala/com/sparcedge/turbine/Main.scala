@@ -31,6 +31,6 @@ object Main extends App with SprayCanHttpServerApp {
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
 
-	val handler = system.actorOf(Props(new TurbineHttpServiceActor(bladeManager)))
+	val handler = system.actorOf(Props(new TurbineHttpServiceActor(bladeManager)).withDispatcher("com.sparcedge.turbinedb.http-dispatcher"))
 	newHttpServer(handler) ! Bind(interface = "localhost", port = 8080)
 }

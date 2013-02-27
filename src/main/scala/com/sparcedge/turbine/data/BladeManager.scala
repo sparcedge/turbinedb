@@ -9,7 +9,7 @@ import scala.util.Random
 object BladeManager {
 	case class IndexesRequest(query: TurbineQuery)
 	case class IndexesResponse(indexes: Iterable[ActorRef])
-	case class AddEvent(id: String, event: Event, toNotify: ActorRef)
+	case class AddEvent(id: String, event: Event)
 }
 
 import BladeManager._
@@ -36,8 +36,8 @@ class BladeManager(blade: Blade) extends Actor {
 				beginIndexPopulation(newIndexes)
 			}
 			sender ! IndexesResponse(indexes)
-		case AddEvent(id, event, toNotify) =>
-			partitionManager ! WriteEvent(id, event, toNotify)
+		case AddEvent(id, event) =>
+			partitionManager ! WriteEvent(id, event)
 			// TODO: Efficiency
 			indexMap.values.foreach(_ ! UpdateIndex(event))
 		case _ =>

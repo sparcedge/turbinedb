@@ -4,7 +4,7 @@ import scala.collection.mutable
 import scala.collection.GenMap
 import com.sparcedge.turbine.query._
 import com.sparcedge.turbine.event.Event
-import com.sparcedge.turbine.util.{Timer,WrappedTreeMap}
+import com.sparcedge.turbine.util.WrappedTreeMap
 
 object QueryUtil {
 	val GROUP_SEPARATOR = "✈"

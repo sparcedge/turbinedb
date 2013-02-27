@@ -16,6 +16,8 @@ import com.sparcedge.turbine.query.{TurbineQueryPackage,QueryHandler,Blade}
 object TurbineManager {
 	case class QueryDispatchRequest(rawQuery: String, ctx: RequestContext)
 	case class AddEventRequest(rawEvent: String, ctx: RequestContext)
+	// TODO: Nasty Nasty Hack
+	var universalEventWrittenListener: ActorRef = null
 }
 
 import TurbineManager._
@@ -28,7 +30,10 @@ class TurbineManager() extends Actor {
 	val journal = new Journal
 	initializeJournal()
 
-	val bladeRepositoryManager = context.actorOf(Props[BladeManagerRepository], "BladeRepositoryManager")
+	val bladeRepositoryManager = context.actorOf(Props(new BladeManagerRepository()), "BladeRepositoryManager")
+	val journalReader = context.actorOf (
+		Props(new JournalReader(journal, writeHandlerRouter)), "JournalReader"
+	)
 	val queryHandlerRouter = context.actorOf (
 		Props(new QueryHandler(bladeRepositoryManager)).withRouter(RoundRobinRouter(50)), "QueryHandlerRouter"
 	)
@@ -38,9 +43,7 @@ class TurbineManager() extends Actor {
 	val journalWriter = context.actorOf (
 		Props(new JournalWriter(journal)), "JournalWriter"
 	)
-	val journalReader = context.actorOf (
-		Props(new JournalReader(journal, writeHandlerRouter)), "JournalReader"
-	)
+	universalEventWrittenListener = journalReader
 
 	def receive = {
 		case QueryDispatchRequest(rawQuery, ctx) =>

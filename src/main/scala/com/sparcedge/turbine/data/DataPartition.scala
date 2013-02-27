@@ -20,77 +20,20 @@ class DataPartition(val blade: Blade) {
 	val partitionDirectory = getDirectoryForBlade(blade)
 	var dataSegments = retrieveAllExistingSegments(blade).toList
 	var eventCount = retrieveExistingEventCount(blade)
-	var newestTimestamp = retrieveLatestInternalTimestamp(blade)
 	val lngArr = new Array[Byte](8)
 
 	def writeEvent(event: Event) {
-		val eventSegments = getEventSegments(event)
+		writeEvents(List[Event](event))
+	}
 
-		if(event.its > newestTimestamp) 
-			newestTimestamp = event.its
-		
-		if(!containsAllSegments(eventSegments)) 
-			addNewSegments(eventSegments)
-		
-		val segmentOutStreamMap = createSegmentOutputStreamMap(eventSegments)
+	def writeEvents(events: Iterable[Event]) {
+		val eventWriter = new EventOutputWriter(dataSegments, events)
 		try {
-			writeEventToSegmentFiles(event, segmentOutStreamMap)
-			eventCount += 1
+			eventWriter.writeEvents()
+			eventCount += events.size
 		} finally {
-			segmentOutStreamMap.values.foreach { stream => stream.close() }
-		}
-	}
-
-	def writeEventToSegmentFiles(event: Event, segmentOutStreamMap: mutable.Map[String,BufferedOutputStream]) {
-		segmentOutStreamMap foreach { case (segment, outStream) =>
-			if(segment == "ts") {
-				outStream.write(bytes(event.ts))
-			} else if(segment == "its") {
-				outStream.write(bytes(event.its))
-			} else {
-				writeEventSegment(event, segment, outStream)
-			}
-		}
-	}
-
-	def addNewSegments(segments: Iterable[String]) = {
-		segments.filterNot(dataSegments.contains).foreach { segmentToAdd =>
-			ensureCacheSegmentFileExists(blade, segmentToAdd)
-			dataSegments = segmentToAdd :: dataSegments
-		}
-	}
-
-	def containsAllSegments(segments: Iterable[String]): Boolean = {
-		segments.forall(dataSegments.contains(_))
-	}
-
-	def getEventSegments(event: Event): Iterable[String] = {
-		(event.dblValues.keySet ++ event.strValues.keySet) + "ts" + "its"
-	}
-
-	def createSegmentOutputStreamMap(segments: Iterable[String]): mutable.Map[String,BufferedOutputStream] = {
-		val outStreamMap = mutable.Map[String,BufferedOutputStream]()
-		segments.foreach { segment =>
-			outStreamMap(segment) = new BufferedOutputStream ( 
-				new FileOutputStream(getDataFileNameForBladeSegment(blade, segment), true), 128 * 100
-			)
-		}
-		outStreamMap
-	}
-
-	def writeEventSegment(event: Event, segment: String, outStream: BufferedOutputStream) {
-		event.dblValues.get(segment) match {
-			case Some(value) => 
-				outStream.write(1.byteValue)
-				outStream.write(bytes(value))
-			case None => event.strValues.get(segment) match {
-				case Some(value) =>
-					outStream.write(2.byteValue)
-					outStream.write(value.size.byteValue)
-					outStream.write(value.getBytes)
-				case None => 
-					outStream.write(0.byteValue)
-			}
+			eventWriter.close()
+			dataSegments = dataSegments ++ eventWriter.newSegments
 		}
 	}
 
@@ -180,8 +123,93 @@ class DataPartition(val blade: Blade) {
 	def retrieveOptionalSegments(keys: Iterable[IndexKey]): Iterable[String] = {
 		keys.map(_.reducer.segment)
 	}
+
+	class SegmentBuffer(val segment: String, val blade: Blade) {
+		val buffer = new CustomByteBuffer(getDataFileNameForBladeSegment(blade, segment), DEFAULT_PAGE_SIZE)
+	}
+
+	class EventOutputWriter(dataPartSegments: List[String], events: Iterable[Event]) {
+		val newSegments = mutable.ListBuffer[String]()
+		val outputStreamMap = mutable.Map[String,BufferedOutputStream]()
+		initializeOutputStreamMap()
+
+		def writeEvents() {
+			val allEventSegments = events.flatMap(getEventSegments(_))
+			addNewSegments(allEventSegments)
+			events foreach { event =>
+				writeEvent(event)
+			}
+		}
+
+		private def writeEvent(event: Event) {
+			outputStreamMap foreach { case (segment, outStream) =>
+				if(segment == "ts") {
+					outStream.write(bytes(event.ts))
+				} else if(segment == "its") {
+					outStream.write(bytes(event.its))
+				} else {
+					writeEventSegment(event, segment, outStream)
+				}
+			}
+		}
+
+		def close() {
+			outputStreamMap.values.foreach { stream => stream.close() }
+		}
+
+		private def writeEventSegment(event: Event, segment: String, outStream: BufferedOutputStream) {
+			event.dblValues.get(segment) match {
+				case Some(value) => 
+					outStream.write(1.byteValue)
+					outStream.write(bytes(value))
+				case None => event.strValues.get(segment) match {
+					case Some(value) =>
+						outStream.write(2.byteValue)
+						outStream.write(value.size.byteValue)
+						outStream.write(value.getBytes)
+					case None => 
+						outStream.write(0.byteValue)
+				}
+			}
+		}
+
+		private def initializeOutputStreamMap() {
+			dataPartSegments.foreach { segment =>
+				outputStreamMap(segment) = new BufferedOutputStream ( 
+					new FileOutputStream(getDataFileNameForBladeSegment(blade, segment), true), 128 * 100
+				)
+			}
+		}
+
+		private def createOutputStream(segment: String): BufferedOutputStream = {
+			new BufferedOutputStream ( 
+				new FileOutputStream(getDataFileNameForBladeSegment(blade, segment), true), 128 * 100
+			)
+		}
+
+		private def initializeSegment(segment: String) {
+			ensureCacheSegmentFileExists(blade, segment)
+			padSegmentFileZeroBytes(blade, segment, eventCount)
+		}
+
+		private def addNewSegments(segments: Iterable[String]) = {
+			segments.filterNot(dataPartSegments.contains).foreach { segmentToAdd =>
+				ensureCacheSegmentFileExists(blade, segmentToAdd)
+				padSegmentFileZeroBytes(blade, segmentToAdd, eventCount)
+				newSegments += segmentToAdd
+			}
+		}
+
+		private def getEventSegments(event: Event): Iterable[String] = {
+			(event.dblValues.keySet ++ event.strValues.keySet) + "ts" + "its"
+		}
+	}
 }
 
-class SegmentBuffer(val segment: String, val blade: Blade) {
-	val buffer = new CustomByteBuffer(getDataFileNameForBladeSegment(blade, segment), DEFAULT_PAGE_SIZE)
-}
+
+
+
+
+
+
+

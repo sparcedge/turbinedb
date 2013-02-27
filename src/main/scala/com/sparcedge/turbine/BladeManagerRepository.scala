@@ -4,7 +4,7 @@ import akka.actor.{Actor,Props,ActorSystem,ActorRef}
 
 import com.sparcedge.turbine.query.Blade
 import com.sparcedge.turbine.data.BladeManager
-import com.sparcedge.turbine.util.{WrappedTreeMap,Timer,DiskUtil}
+import com.sparcedge.turbine.util.{WrappedTreeMap,DiskUtil}
 
 object BladeManagerRepository {
 	case class BladeManagerRangeRequest(sBlade: Blade, eBlade: Blade)
@@ -19,7 +19,7 @@ object BladeManagerRepository {
 
 import BladeManagerRepository._
 
-class BladeManagerRepository extends Actor {
+class BladeManagerRepository() extends Actor {
 
 	val bladeManagerMap = new WrappedTreeMap[String,(Blade,ActorRef)]()
 	discoverAndInitializeExistingBlades()

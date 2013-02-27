@@ -36,7 +36,7 @@ class WriteHandler(bladeManagerRepository: ActorRef) extends Actor {
 			val eventIngressPkg = EventIngressPackage.fromBytes(eventPkgBytes)
 			val eventPkg = EventPackage.fromEventIngressPackage(eventIngressPkg)
 			val manager = retrieveAndOrCreateManager(eventPkg.blade)
-			writeEvent(manager, id, eventPkg.event, sender)
+			writeEvent(manager, id, eventPkg.event)
 		case _ =>
 	}
 
@@ -45,7 +45,7 @@ class WriteHandler(bladeManagerRepository: ActorRef) extends Actor {
 		bladeManResponseFuture.map { response => response.manager }
 	}
 
-	def writeEvent(manager: Future[ActorRef], id: String, event: Event, toNotify: ActorRef) {
-		manager.foreach { man => man ! AddEvent(id, event, toNotify) }
+	def writeEvent(manager: Future[ActorRef], id: String, event: Event) {
+		manager.foreach { man => man ! AddEvent(id, event) }
 	}
 }

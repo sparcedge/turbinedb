@@ -63,20 +63,3 @@ object EventIngressPackage {
 case class EventIngressPackage(domain: String, tenant: String, category: String, event: IngressEvent)
 
 case class IngressEvent(timestamp: Long, data: JObject)
-
-/*
-
-{
-	"domain": "test-domain",
-	"tenant": "test-tenant",
-	"category": "test-category",
-	"event": {
-		"timestamp": 239847239798237,
-		"data": {
-			"facility": "Facility-1",
-			"kwh": 543.08
-		}
-	}
-}
-
-*/
