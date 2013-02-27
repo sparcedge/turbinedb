@@ -20,13 +20,14 @@ object Resolvers {
 }
 
 object Dependencies {
-	val akkaVersion = "2.1.0"
+	val akkaVersion = "2.1.1"
 	val sprayVersion = "1.1-M7"
 
 	val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
 	val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
 	val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
 	val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
+	val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % akkaVersion
 
 	val sprayCan = "io.spray" % "spray-can" % sprayVersion
 	val sprayRouting = "io.spray" % "spray-routing" % sprayVersion
@@ -39,7 +40,7 @@ object Dependencies {
 
 	val scalatest	= "org.scalatest" %% "scalatest" % "1.9.1" % "test"
 
-	val akkaDependencies = Seq(akkaActor, akkaRemote, akkaSlf4j, akkaTestkit)
+	val akkaDependencies = Seq(akkaActor, akkaRemote, akkaSlf4j, akkaTestkit, akkaCluster)
 	val sprayDependencies = Seq(sprayCan, sprayRouting)
 	val miscDependencies = Seq(jsonJackson, jodaTime, jodaConvert, slf4j, scalatest, journalio)
 	val allDependencies = akkaDependencies ++ sprayDependencies ++ miscDependencies
