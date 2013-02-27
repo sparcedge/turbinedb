@@ -23,6 +23,7 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 
 	val eventLocations = mutable.Map[String,Location]()
 	val processJournalDelay = context.system.settings.config.getInt("com.sparcedge.turbinedb.journal.process-delay")
+	var lastLocation: Option[Location] = None
 	scheduleProcessJournalMessage()
 
 	var processedAndAcknowledged = 0
@@ -42,15 +43,14 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 		}
 	}
 
-	// TODO: Record last start from there?
 	def processJournalEvents() {
-		journal.redo() foreach { loc =>
+		val journalIterator = lastLocation map { ll => journal.redo(ll) } getOrElse { journal.redo() }
+		journalIterator foreach { loc =>
 			val locKey = createLocationKey(loc)
-			if(!eventLocations.contains(locKey)) {
-				val eventBytes = journal.read(loc, ReadType.ASYNC) // TODO: Review
-				writeHandlerRouter ! WriteEventRequest(locKey, eventBytes)
-				eventLocations(locKey) = loc
-			}
+			val eventBytes = journal.read(loc, ReadType.ASYNC)
+			writeHandlerRouter ! WriteEventRequest(locKey, eventBytes)
+			eventLocations(locKey) = loc
+			lastLocation = Some(loc)
 		}
 		scheduleProcessJournalMessage()
 	}
