@@ -40,8 +40,7 @@ trait TurbineHttpService extends HttpService {
 			post {
 				entity(as[String]) { rawEvent =>
 					respondWithMediaType(`application/json`) { ctx =>
-						turbineManager ! AddEventRequest(rawEvent)
-						ctx.complete(""" {"ok": true} """)
+						turbineManager ! AddEventRequest(rawEvent, ctx)
 					}
 				}
 			}

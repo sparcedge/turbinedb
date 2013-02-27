@@ -11,6 +11,7 @@ object BladeManagerRepository {
 	case class BladeManagerRangeUnboundedRequest(sBlade: Blade)
 	case class BladeManagerRequest(blade: Blade)
 	case class BladeManagerGetOrCreateRequest(blade: Blade)
+	
 	case class BladeManagerRangeResponse(managers: Iterable[(Blade,ActorRef)])
 	case class BladeManagerResponse(manager: Option[ActorRef])
 	case class BladeManagerGetOrCreateResponse(manager: ActorRef)
@@ -18,9 +19,10 @@ object BladeManagerRepository {
 
 import BladeManagerRepository._
 
-class BladeManagerRepository(preloadBlades: Iterable[Blade]) extends Actor {
+class BladeManagerRepository extends Actor {
 
-	val bladeManagerMap = discoverExistingBladesAndInitializeNewBlades(preloadBlades)
+	val bladeManagerMap = new WrappedTreeMap[String,(Blade,ActorRef)]()
+	discoverAndInitializeExistingBlades()
 
 	def receive = {
 		case BladeManagerRequest(blade) =>
@@ -43,22 +45,15 @@ class BladeManagerRepository(preloadBlades: Iterable[Blade]) extends Actor {
 		bladeManagerMap.subMap(sBlade.key, eBlade.key).values
 	}
 
-	def discoverExistingBladesAndInitializeNewBlades(blades: Iterable[Blade]): WrappedTreeMap[String,(Blade,ActorRef)] = {
-		val timer = new Timer
-
-		timer.start()
-		val managerMap = new WrappedTreeMap[String,(Blade,ActorRef)]()
+	def discoverAndInitializeExistingBlades() {
 		val existingBlades = DiskUtil.retrieveBladesFromExistingData()
-		timer.stop("[TurbineBladeManager] Discovered existing blades (" + existingBlades.size + ")")
+		initializeBlades(existingBlades)
+	}
 
-		timer.start()
-		val allBlades = (blades ++ existingBlades).toSet
-		allBlades foreach { blade =>
-			managerMap(blade.key) = (blade -> createManagerForBlade(blade))
+	def initializeBlades(blades: Iterable[Blade]) = {
+		blades foreach { blade =>
+			bladeManagerMap(blade.key) = (blade -> createManagerForBlade(blade))
 		}
-		timer.stop("[TurbineBladeManager] Created managers for all new / existing blades (" + allBlades.size + ")")
-
-		managerMap
 	}
 
 	def createManagerForBlade(blade: Blade): ActorRef = {

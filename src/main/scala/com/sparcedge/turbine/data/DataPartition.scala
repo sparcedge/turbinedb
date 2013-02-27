@@ -4,7 +4,7 @@ import java.io._
 import scala.collection.mutable
 import akka.actor.ActorRef
 
-import com.sparcedge.turbine.event.{Event,ConcreteEvent}
+import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.util.{DiskUtil,Timer,CustomByteBuffer}
 import com.sparcedge.turbine.query.{Blade,Match,Grouping}
 

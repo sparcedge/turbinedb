@@ -3,7 +3,7 @@ package com.sparcedge.turbine.data
 import scala.collection.mutable
 import scala.collection.GenMap
 import com.sparcedge.turbine.query._
-import com.sparcedge.turbine.event.{Event,ConcreteEvent}
+import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.util.{Timer,WrappedTreeMap}
 
 object QueryUtil {

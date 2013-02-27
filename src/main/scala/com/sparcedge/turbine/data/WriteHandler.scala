@@ -11,14 +11,14 @@ import scala.collection.mutable
 import spray.routing.RequestContext
 import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 
-import com.sparcedge.turbine.event.{EventPackage,Event}
+import com.sparcedge.turbine.event.{EventPackage,EventIngressPackage,Event}
 import com.sparcedge.turbine.BladeManagerRepository
 import com.sparcedge.turbine.util.{WrappedTreeMap,CustomJsonSerializer}
 import com.sparcedge.turbine.data._
 import com.sparcedge.turbine.query.Blade
 
 object WriteHandler {
-	case class WriteEventRequest(eventPkg: EventPackage)
+	case class WriteEventRequest(id: String, eventPkgBytes: Array[Byte])
 }
 
 import BladeManagerRepository._
@@ -31,10 +31,12 @@ class WriteHandler(bladeManagerRepository: ActorRef) extends Actor {
 	implicit val ec: ExecutionContext = context.dispatcher
 
 	def receive = {
-		case WriteEventRequest(eventPkg) =>
+		case WriteEventRequest(id, eventPkgBytes) =>
 			// IN THE FUTURE!!!
+			val eventIngressPkg = EventIngressPackage.fromBytes(eventPkgBytes)
+			val eventPkg = EventPackage.fromEventIngressPackage(eventIngressPkg)
 			val manager = retrieveAndOrCreateManager(eventPkg.blade)
-			writeEvent(manager, eventPkg.event)
+			writeEvent(manager, id, eventPkg.event, sender)
 		case _ =>
 	}
 
@@ -43,7 +45,7 @@ class WriteHandler(bladeManagerRepository: ActorRef) extends Actor {
 		bladeManResponseFuture.map { response => response.manager }
 	}
 
-	def writeEvent(manager: Future[ActorRef], event: Event) {
-		manager.foreach { man => man ! AddEvent(event) }
+	def writeEvent(manager: Future[ActorRef], id: String, event: Event, toNotify: ActorRef) {
+		manager.foreach { man => man ! AddEvent(id, event, toNotify) }
 	}
 }

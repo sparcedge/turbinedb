@@ -1,19 +1,23 @@
 package com.sparcedge.turbine.query
 
-import com.sparcedge.turbine.data.IndexKey
+import scala.util.{Try,Success,Failure}
 import scala.collection.immutable.TreeMap
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
 
+import com.sparcedge.turbine.data.IndexKey
+
 object TurbineQueryPackage {
 
 	implicit val formats = org.json4s.DefaultFormats
 
-	def unmarshall(queryStr: String): TurbineQueryPackage = {
-		val json = parse(queryStr)
-		json.extract[TurbineQueryPackage]
+	def tryParse(queryStr: String): Try[TurbineQueryPackage] = {
+		Try {
+			val json = parse(queryStr)
+			json.extract[TurbineQueryPackage]
+		}
 	}
 }
 
