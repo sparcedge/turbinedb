@@ -32,10 +32,10 @@ trait BatchBehavior { this: Actor =>
 	}
 
 	def flush() {
-		flushBatch()
-		batchSize = 0
 		scheduledFlush.foreach(_.cancel)
 		scheduledFlush = None
+		batchSize = 0
+		flushBatch()
 	}
 
 	def scheduleFlush() {
@@ -50,7 +50,6 @@ trait BatchStorage[T] extends BatchBehavior { this: Actor =>
 
 	override def flush() {
 		super.flush()
-		flushBatch(batch)
 		clearBatch()
 	}
 

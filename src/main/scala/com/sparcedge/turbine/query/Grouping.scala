@@ -50,6 +50,10 @@ class DurationGrouping(val duration: String, offsetOpt: Option[Int]) extends Gro
 	val segment = "ts"
 	val offset = offsetOpt.getOrElse(0)
 
+	override def apply(event: Event): String = {
+		apply(event.ts)
+	}
+
 	override def apply(ts: Long): String = {
 		val tsOffset = applyGmtOffset(ts, offset)
 		val durGroup = duration match {

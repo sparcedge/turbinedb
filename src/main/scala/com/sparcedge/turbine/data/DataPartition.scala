@@ -51,7 +51,7 @@ class DataPartition(val blade: Blade) {
 		val matches = indexes.head.indexKey.matches
 		val groupings = indexes.head.indexKey.groupings
 		val matchBuilder = new MatchBuilder(matches)
-		val groupStrBuilder = new GroupStringBuilder(aggregateGrouping, groupings, blade)
+		val groupStrBuilder = new GroupStringBuilder(DATA_GROUPING, groupings, blade)
 		val indexUpdateBuilder = new IndexUpdateBuilder(indexes)
 		val segmentBuffers = createSegmentBuffers(segments.toList) 
 		val tsBuffer = new SegmentBuffer("ts", blade)
@@ -132,11 +132,13 @@ class DataPartition(val blade: Blade) {
 	class EventOutputWriter(dataPartSegments: List[String], events: Iterable[Event]) {
 		val newSegments = mutable.ListBuffer[String]()
 		val outputStreamMap = mutable.Map[String,BufferedOutputStream]()
+		val allEventSegments = events.flatMap(getEventSegments(_)).toSet
+		
+		addNewSegments(allEventSegments)
 		initializeOutputStreamMap()
 
 		def writeEvents() {
-			val allEventSegments = events.flatMap(getEventSegments(_)).toSet
-			addNewSegments(allEventSegments)
+			
 			events foreach { event =>
 				writeEvent(event)
 			}
@@ -175,7 +177,7 @@ class DataPartition(val blade: Blade) {
 		}
 
 		private def initializeOutputStreamMap() {
-			dataPartSegments.foreach { segment =>
+			(dataPartSegments ++ newSegments).foreach { segment =>
 				outputStreamMap(segment) = new BufferedOutputStream ( 
 					new FileOutputStream(getDataFileNameForBladeSegment(blade, segment), true), 128 * 100
 				)

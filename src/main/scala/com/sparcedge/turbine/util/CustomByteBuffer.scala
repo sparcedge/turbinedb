@@ -43,6 +43,8 @@ class CustomByteBuffer(fileName: String, size: Int) {
 				if(overSize) {
 					bSize = file.read(buffer)
 					currIndex = 0
+					if(bSize < 0) 
+						throw new Exception("Asked for more bytes than contained in file!")
 				}
 			}
 			num
@@ -67,6 +69,8 @@ class CustomByteBuffer(fileName: String, size: Int) {
 				if(overSize) {
 					bSize = file.read(buffer)
 					currIndex = 0
+					if(bSize < 0)
+						throw new Exception("Asked for more bytes than contained in file!")
 				}
 			}
 			res

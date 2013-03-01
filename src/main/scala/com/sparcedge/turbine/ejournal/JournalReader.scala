@@ -27,16 +27,13 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 	var lastLocation: Option[Location] = None
 	scheduleProcessJournalMessage()
 
-	var processedAndAcknowledged = 0
 
 	def receive = {
 		case EventWrittenToDisk(id) =>
 			removeEventFromJournal(id)
-			processedAndAcknowledged += 1
 		case EventsWrittenToDisk(ids) =>
 			ids foreach {id =>
 				removeEventFromJournal(id)
-				processedAndAcknowledged += 1
 			}
 		case ProcessJournalEvents =>
 			processJournalEvents()
@@ -50,13 +47,18 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 	}
 
 	def processJournalEvents() {
+		var skip = lastLocation.isDefined
 		val journalIterator = lastLocation map { ll => journal.redo(ll) } getOrElse { journal.redo() }
 		journalIterator foreach { loc =>
 			val locKey = createLocationKey(loc)
 			val eventBytes = journal.read(loc, ReadType.ASYNC)
-			writeHandlerRouter ! WriteEventRequest(locKey, eventBytes)
-			eventLocations(locKey) = loc
-			lastLocation = Some(loc)
+			if(!skip) {
+				writeHandlerRouter ! WriteEventRequest(locKey, eventBytes)
+				eventLocations(locKey) = loc
+				lastLocation = Some(loc)
+			} else {
+				skip = false
+			}
 		}
 		scheduleProcessJournalMessage()
 	}

@@ -53,7 +53,7 @@ class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with Stash 
 
 class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade) {
 	val index = new WrappedTreeMap[String,ReducedResult]()
-	val fullGroupings = aggregateGrouping :: indexKey.groupings.toList
+	val groupings = indexKey.groupings
 
 	def update(event: Event) {
 		if(eventMatchesAllCriteria(event, indexKey.matches)) {
@@ -62,7 +62,7 @@ class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade
 	}
 
 	def updateUnchecked(event: Event) {
-		val grpStr = createGroupStringForEvent(event, fullGroupings)
+		val grpStr = createDataGroupString(event, blade, groupings)
 		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
 		reducer(event)
 	}

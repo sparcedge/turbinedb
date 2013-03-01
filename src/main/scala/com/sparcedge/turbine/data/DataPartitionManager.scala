@@ -32,7 +32,8 @@ class DataPartitionManager(blade: Blade) extends Actor with BatchStorage[(String
 		case PopulateIndexesRequest(indexes) =>
 			val f = future { partition.populateIndexes(indexes) }
 			f onComplete {
-				case Success(un) => indexes.foreach(index => index.indexManager ! PopulatedIndex(index))
+				case Success(un) => 
+					indexes.foreach(index => index.indexManager ! PopulatedIndex(index))
 				case Failure(err) => // TODO: Handle Population Failure
 			}
 		case _ =>

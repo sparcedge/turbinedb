@@ -29,15 +29,18 @@ class BladeManager(blade: Blade) extends Actor {
 
 	def receive = {
 		case IndexesRequest(query) =>
+			println("Receieved Indexes Request")
 			val newIndexes = mutable.ListBuffer[Index]()
 
 			val indexes = retrieveIndexKeysFromQuery(query) map { key => 
 				indexMap.getOrElseUpdate(key.id, createAggregateIndex(key, newIndexes))
 			}
+			println("Got / Created Indexes")
 			if(newIndexes.size > 0) {
 				beginIndexPopulation(newIndexes)
 			}
 			sender ! IndexesResponse(indexes)
+			println("Responded With Indexes")
 		case AddEvent(id, event) =>
 			partitionManager ! WriteEvent(id, event)
 			// TODO: Efficiency
