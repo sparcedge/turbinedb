@@ -51,15 +51,16 @@ class DurationGrouping(val duration: String, offsetOpt: Option[Int]) extends Gro
 	val offset = offsetOpt.getOrElse(0)
 
 	override def apply(ts: Long): String = {
+		val tsOffset = applyGmtOffset(ts, offset)
 		val durGroup = duration match {
-			case "year" => calculateYearCombined(ts)
-			case "month" => calculateMonthCombined(ts)
-			case "day" => calculateDayCombined(ts)
-			case "hour" => calculateHourCombined(ts)
-			case "minute" => calculateMinuteCombined(ts)
+			case "year" => calculateYearCombined(tsOffset)
+			case "month" => calculateMonthCombined(tsOffset)
+			case "day" => calculateDayCombined(tsOffset)
+			case "hour" => calculateHourCombined(tsOffset)
+			case "minute" => calculateMinuteCombined(tsOffset)
 			case _ => throw new Exception("Invalid Duration Value")
 		}
-		applyGmtOffset(durGroup, offset).toString
+		durGroup.toString
 	}
 
 	val uniqueId: String = s"DurationGrouping.${duration}.${offset}"
