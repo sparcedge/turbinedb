@@ -113,7 +113,7 @@ class DataPartition(val blade: Blade) {
 	}
 
 	def createSegmentBuffers(segments: Iterable[String]): Iterable[SegmentBuffer] = {
-		segments.filter(dataSegments.contains(_)).map(new SegmentBuffer(_, blade))
+		segments.filter(seg => dataSegments.contains(seg) && seg != "ts").map(new SegmentBuffer(_, blade))
 	}
 
 	def retrieveRequiredSegments(keys: Iterable[IndexKey]): Iterable[String] = {

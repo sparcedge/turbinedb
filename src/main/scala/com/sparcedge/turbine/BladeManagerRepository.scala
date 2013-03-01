@@ -44,7 +44,11 @@ class BladeManagerRepository() extends Actor {
 	}
 
 	def getBladeManagersInRange(sBlade: Blade, eBlade: Blade): Iterable[(Blade,ActorRef)] = {
-		bladeManagerMap.subMap(sBlade.key, eBlade.key).values
+		println(s"StartBlade: ${sBlade}")
+		println(s"EndBlade: ${eBlade}")
+		val managers = bladeManagerMap.subMap(sBlade.key, eBlade.key).values
+		println(s"Managers: ${managers.size}")
+		managers
 	}
 
 	def getUpperBoundaryForCollection(coll: Collection): Blade = {

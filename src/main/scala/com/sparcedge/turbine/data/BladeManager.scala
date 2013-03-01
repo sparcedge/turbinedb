@@ -23,14 +23,14 @@ class BladeManager(blade: Blade) extends Actor {
 		s"${blade.toString}-partition-manager"
 	)
 
-	val indexMap = mutable.Map[IndexKey,ActorRef]()
+	val indexMap = mutable.Map[String,ActorRef]()
 
 	def receive = {
 		case IndexesRequest(query) =>
 			val newIndexes = mutable.ListBuffer[Index]()
 
 			val indexes = retrieveIndexKeysFromQuery(query) map { key => 
-				indexMap.getOrElseUpdate(key, createAggregateIndex(key, newIndexes))
+				indexMap.getOrElseUpdate(key.id, createAggregateIndex(key, newIndexes))
 			}
 			if(newIndexes.size > 0) {
 				beginIndexPopulation(newIndexes)
@@ -60,5 +60,16 @@ class BladeManager(blade: Blade) extends Actor {
 }
 
 case class IndexKey (reducer: CoreReducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
-	val id = s"${reducer.reducer}.${reducer.segment}.${matches.size}.${groupings.size}.${Random.nextLong}"
+	val uniqueMatchStr = matches.map(_.uniqueId).toList.sorted.mkString(".")
+	val uniqueGroupStr = groupings.map(_.uniqueId).toList.sorted.mkString(".")
+	val id = s"${reducer.reducer}.${reducer.segment}.${uniqueMatchStr}.${uniqueGroupStr}"
 }
+
+
+
+
+
+
+
+
+

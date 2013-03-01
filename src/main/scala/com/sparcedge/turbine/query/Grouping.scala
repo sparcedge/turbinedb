@@ -25,9 +25,12 @@ trait Grouping {
 	def apply(numeric: Double): String = numeric.toString
 	def apply(str: String): String = str
 	def apply(event: Event): String = event(segment).getOrElse("").toString
+	val uniqueId: String
 }
 
-class SegmentGrouping(val segment: String) extends Grouping
+class SegmentGrouping(val segment: String) extends Grouping {
+	val uniqueId: String = s"SegmentGrouping.${segment}"
+}
 
 class DurationGrouping(val duration: String) extends Grouping {
 	val segment = "ts"
@@ -42,6 +45,7 @@ class DurationGrouping(val duration: String) extends Grouping {
 			case _ => throw new Exception("Invalid Duration Value")
 		}
 	}
+	val uniqueId: String = s"DurationGrouping.${duration}"
 }
 
 class IndexGrouping(val indexDuration: String) extends Grouping {
@@ -56,4 +60,5 @@ class IndexGrouping(val indexDuration: String) extends Grouping {
 			throw new Exception("Invalid Index Duration Value")	
 		}
 	}
+	val uniqueId: String = s"IndexGrouping.${indexDuration}"
 }

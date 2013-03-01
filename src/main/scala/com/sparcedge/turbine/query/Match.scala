@@ -44,6 +44,7 @@ object Match {
 
 trait Match {
 	val segment: String
+	val uniqueId: String
 
 	def apply(event: Event): Boolean = false
 	def apply(str: String): Boolean = false
@@ -69,57 +70,71 @@ trait StringMatch extends Match {
 
 class EqualsNumericMatch(val segment: String, val value: Double) extends NumericMatch {
 	def evaluate(testVal: Double) = testVal == value
+	val uniqueId = s"EqualsNumericMatch.${segment}.${value}"
 }
 
 class EqualsStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal == value
+	val uniqueId = s"EqualsStringMatch.${segment}.${value}"
 }
 
 class NotEqualsNumericMatch(val segment: String, val value: Double) extends NumericMatch {
 	def evaluate(testVal: Double) = testVal != value
+	val uniqueId = s"NotEqualsNumericMatch.${segment}.${value}"
 }
 
 class NotEqualsStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal != value
+	val uniqueId = s"NotEqualsNumericMatch.${segment}.${value}"
 }
 
 class GreaterThanNumericMatch(val segment: String, val value: Double) extends NumericMatch {
 	def evaluate(testVal: Double) = testVal > value
+	val uniqueId = s"GreaterThanNumericMatch.${segment}.${value}"
 }
 
 class GreaterThanStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal > value
+	val uniqueId = s"GreaterThanStringMatch.${segment}.${value}"
 }
 
 class GreaterThanEqualNumericMatch(val segment: String, val value: Double) extends NumericMatch {
 	def evaluate(testVal: Double) = testVal >= value
+	val uniqueId = s"GreaterThanEqualNumericMatch.${segment}.${value}"
 }
 
 class GreaterThanEqualStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal >= value
+	val uniqueId = s"GreaterThanEqualStringMatch.${segment}.${value}"
 }
 
 class LessThanNumericMatch(val segment: String, val value: Double) extends NumericMatch {
 	def evaluate(testVal: Double) = testVal < value
+	val uniqueId = s"LessThanNumericMatch.${segment}.${value}"
 }
 
 class LessThanStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal < value
+	val uniqueId = s"LessThanStringMatch.${segment}.${value}"
 }
 
 class LessThanEqualNumericMatch(val segment: String, val value: Double) extends NumericMatch {
 	def evaluate(testVal: Double) = testVal <= value
+	val uniqueId = s"LessThanEqualNumericMatch.${segment}.${value}"
 }
 
 class LessThanEqualStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal <= value
+	val uniqueId = s"LessThanEqualStringMatch.${segment}.${value}"
 }
 
+// TODO: Value Ordering
 class InMatch(val segment: String, val values: Seq[Any]) extends Match {
 	override def apply(event: Event): Boolean = event(segment).map(values.contains(_)).getOrElse(false)
 	override def apply(str: String): Boolean = values.contains(str)
 	override def apply(numeric: Double): Boolean = values.contains(numeric)
 	override def apply(lng: Long): Boolean = values.contains(lng)
+	val uniqueId = s"InMatch.${segment}.${values.mkString}"
 }
 
 class NotInMatch(val segment: String, val values: Seq[Any]) extends Match {
@@ -127,4 +142,5 @@ class NotInMatch(val segment: String, val values: Seq[Any]) extends Match {
 	override def apply(str: String): Boolean = !values.contains(str)
 	override def apply(numeric: Double): Boolean = !values.contains(numeric)
 	override def apply(lng: Long): Boolean = !values.contains(lng)
+	val uniqueId = s"InMatch.${segment}.${values.mkString}"
 }
