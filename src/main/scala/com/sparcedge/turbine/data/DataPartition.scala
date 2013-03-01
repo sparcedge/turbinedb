@@ -135,7 +135,7 @@ class DataPartition(val blade: Blade) {
 		initializeOutputStreamMap()
 
 		def writeEvents() {
-			val allEventSegments = events.flatMap(getEventSegments(_))
+			val allEventSegments = events.flatMap(getEventSegments(_)).toSet
 			addNewSegments(allEventSegments)
 			events foreach { event =>
 				writeEvent(event)
@@ -186,11 +186,6 @@ class DataPartition(val blade: Blade) {
 			new BufferedOutputStream ( 
 				new FileOutputStream(getDataFileNameForBladeSegment(blade, segment), true), 128 * 100
 			)
-		}
-
-		private def initializeSegment(segment: String) {
-			ensureCacheSegmentFileExists(blade, segment)
-			padSegmentFileZeroBytes(blade, segment, eventCount)
 		}
 
 		private def addNewSegments(segments: Iterable[String]) = {
