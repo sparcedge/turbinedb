@@ -19,9 +19,9 @@ object TurbineQuery {
 	def apply(parseQuery: TurbineQueryParse): TurbineQuery = {
 		val start = parseQuery.start
 		val end = parseQuery.end
-		val matches = parseQuery.matches map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (List[Match]())
-		val groupings = parseQuery.groupings map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (List[Grouping]())
-		val reducers = parseQuery.reducers.map(Reducer(_))
+		val matches = parseQuery.`match` map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (List[Match]())
+		val groupings = parseQuery.group map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (List[Grouping]())
+		val reducers = parseQuery.reduce.map(Reducer(_))
 		new TurbineQuery(start, end, matches, groupings, reducers)
 	}
 
@@ -36,9 +36,9 @@ object TurbineQuery {
 case class TurbineQueryParse (
 	start: Option[Long],
 	end: Option[Long],
-	matches: Option[List[JsObject]],
-	groupings: Option[List[JsObject]],
-	reducers: List[JsObject]
+	`match`: Option[List[JsObject]],
+	group: Option[List[JsObject]],
+	reduce: List[JsObject]
 )
 
 class TurbineQuery (
