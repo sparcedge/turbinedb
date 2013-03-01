@@ -49,6 +49,10 @@ object CrazierDateUtil {
 		((ms - monthStart) / MILLIS_PER_HOUR) + 100000
 	}
 
+	def applyGmtOffset(value: Long, offset: Int): Long = {
+		value + (offset * MILLIS_PER_HOUR)
+	}
+
 	def calculateYearCombined(ms: Long): Long = {
 		calculateYear(ms).toLong
 	}

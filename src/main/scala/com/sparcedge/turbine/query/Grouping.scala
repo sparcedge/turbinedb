@@ -2,17 +2,31 @@ package com.sparcedge.turbine.query
 
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.json.Json
-import play.api.libs.json.{JsObject,JsString}
+import play.api.libs.json.{JsObject,JsString,JsValue,JsNumber}
 
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.util.CrazierDateUtil._
 
+// Convert JsObject to Map....easier parse
 object Grouping {
 	def apply(jsObj: JsObject): Grouping = {
-		jsObj.fields.head match {
-			case ("segment", JsString(seg)) => new SegmentGrouping(seg)
-			case ("duration", JsString(dur)) => new DurationGrouping(dur)
+		retrieveGroupingValue(jsObj) match {
+			case Some(("segment", JsString(seg))) => new SegmentGrouping(seg)
+			case Some(("duration", JsString(dur))) => new DurationGrouping(dur, retrieveOffset(jsObj))
 			case _ => throw new Exception("Invalid Grouping")
+		}
+	}
+
+	def retrieveGroupingValue(jsObj: JsObject): Option[(String, JsValue)] = {
+		jsObj.fields.find(f => f._1 == "segment" || f._1 == "duration")
+	}
+
+	def retrieveOffset(jsObj: JsObject): Option[Int] = {
+		jsObj.fields.find(_._1 == "offset").map { field =>
+			field match {
+				case (_, JsNumber(num)) => num.toInt
+				case _ => throw new Exception("Invalid offset value")
+			}
 		}
 	}
 }
@@ -32,20 +46,23 @@ class SegmentGrouping(val segment: String) extends Grouping {
 	val uniqueId: String = s"SegmentGrouping.${segment}"
 }
 
-class DurationGrouping(val duration: String) extends Grouping {
+class DurationGrouping(val duration: String, offsetOpt: Option[Int]) extends Grouping {
 	val segment = "ts"
+	val offset = offsetOpt.getOrElse(0)
 
 	override def apply(ts: Long): String = {
-		duration match {
-			case "year" => calculateYearCombined(ts).toString
-			case "month" => calculateMonthCombined(ts).toString
-			case "day" => calculateDayCombined(ts).toString
-			case "hour" => calculateHourCombined(ts).toString
-			case "minute" => calculateMinuteCombined(ts).toString
+		val durGroup = duration match {
+			case "year" => calculateYearCombined(ts)
+			case "month" => calculateMonthCombined(ts)
+			case "day" => calculateDayCombined(ts)
+			case "hour" => calculateHourCombined(ts)
+			case "minute" => calculateMinuteCombined(ts)
 			case _ => throw new Exception("Invalid Duration Value")
 		}
+		applyGmtOffset(durGroup, offset).toString
 	}
-	val uniqueId: String = s"DurationGrouping.${duration}"
+
+	val uniqueId: String = s"DurationGrouping.${duration}.${offset}"
 }
 
 class IndexGrouping(val indexDuration: String) extends Grouping {
