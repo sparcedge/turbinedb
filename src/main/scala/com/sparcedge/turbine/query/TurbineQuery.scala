@@ -4,62 +4,54 @@ import scala.util.{Try,Success,Failure}
 import scala.collection.immutable.TreeMap
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import org.json4s._
-import org.json4s.jackson.JsonMethods._
+import play.api.libs.json.Json
+import play.api.libs.json.JsObject
 
 import com.sparcedge.turbine.data.IndexKey
 
-object TurbineQueryPackage {
 
-	implicit val formats = org.json4s.DefaultFormats
+case class TurbineQueryPackage(collection: Collection, query: TurbineQuery)
 
-	def tryParse(queryStr: String): Try[TurbineQueryPackage] = {
+object TurbineQuery {
+	implicit val turbineQueryFormat = Json.format[TurbineQueryParse]
+
+	def apply(parseQuery: TurbineQueryParse): TurbineQuery = {
+		val start = parseQuery.start
+		val end = parseQuery.end
+		val matches = parseQuery.matches map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (List[Match]())
+		val groupings = parseQuery.groupings map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (List[Grouping]())
+		val reducers = parseQuery.reducers.map(Reducer(_))
+		new TurbineQuery(start, end, matches, groupings, reducers)
+	}
+
+	def tryParse(queryStr: String): Try[TurbineQuery] = {
 		Try {
-			val json = parse(queryStr)
-			json.extract[TurbineQueryPackage]
+			val json = Json.parse(queryStr)
+			TurbineQuery(json.as[TurbineQueryParse])
 		}
 	}
 }
 
-case class TurbineQueryPackage(domain: String, tenant: String, category: String, query: TurbineQuery)
+case class TurbineQueryParse (
+	start: Option[Long],
+	end: Option[Long],
+	matches: Option[List[JsObject]],
+	groupings: Option[List[JsObject]],
+	reducers: List[JsObject]
+)
 
-case class TurbineQuery (
-	category: String,
-	range: TimeRange,
-	`match`: Option[Map[String,JValue]],
-	group: Option[List[Grouping]],
-	reduce: Option[Reduce]
+class TurbineQuery (
+	val start: Option[Long] = None,
+	val end: Option[Long] = None,
+	val matches: List[Match] = List[Match](),
+	val groupings: List[Grouping] = List[Grouping](),
+	val reducers: List[Reducer] = List[Reducer]()
 ) {
-	implicit val formats = org.json4s.DefaultFormats
 	val minuteFormatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
-	val startPlusMinute = minuteFormatter.print(new DateTime(range.start).plusMinutes(1))
-	val endMinute = range.end.map { end: Long => minuteFormatter.print(new DateTime(end)) }
-	val orderedMatches = `match`.map(unorderedMatches => TreeMap(unorderedMatches.toArray:_*))
-
-	def createAggregateCacheString(reducer: Reducer): String = {
-		orderedMatches.mkString + "-" + group.mkString + "-" + reducer.segment + "-" + reducer.reducer
-	}
+	val startPlusMinute = start map { s => minuteFormatter.print(new DateTime(s).plusMinutes(1)) }
+	val endMinute = end map { e => minuteFormatter.print(new DateTime(e)) }
 
 	def createAggregateIndexKey(reducer: Reducer): IndexKey = {
 		IndexKey(reducer.getCoreReducer(), matches, groupings)
 	}
-
-	def retrieveRequiredFields(): Set[String] = {
-		var reqFields = Set[String]()
-		reqFields = reqFields ++ matches.map(_.segment)
-		reqFields = reqFields ++ groupings.filter(_.`type` == "segment").flatMap(_.value)
-		reqFields = reqFields ++ reduce.map(_.reducerList map (_.segment)).getOrElse(List[String]())
-		reqFields
-	}
-
-	val matches = `match`.getOrElse(Map[String,JValue]()) map { case (segment, value) => 
-		new Match(segment, value.extract[Map[String,JValue]])
-	}
-	val reducers = reduce match {
-		case Some(reduce) => reduce.reducerList
-		case None => List[Reducer]()
-	}
-	val groupings = group.getOrElse(List[Grouping]())
 }
-
-case class TimeRange (start: Long, end: Option[Long])

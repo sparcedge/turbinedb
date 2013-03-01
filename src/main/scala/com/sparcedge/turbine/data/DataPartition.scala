@@ -117,7 +117,7 @@ class DataPartition(val blade: Blade) {
 	}
 
 	def retrieveRequiredSegments(keys: Iterable[IndexKey]): Iterable[String] = {
-		keys.head.matches.map(_.segment) ++: keys.head.groupings.flatMap(_.segment)
+		keys.head.matches.map(_.segment) ++: keys.head.groupings.map(_.segment)
 	}
 
 	def retrieveOptionalSegments(keys: Iterable[IndexKey]): Iterable[String] = {

@@ -8,7 +8,7 @@ class GroupStringBuilder(dataGrouping: Grouping, groupings: Iterable[Grouping], 
 
 	val grpArr = groupings.toArray
 	val grpValues = new Array[String](grpArr.length)
-	val grpIndexMap = toMutableMap(groupings.map(_.requiredSegment).zipWithIndex)
+	val grpIndexMap = toMutableMap(groupings.map(_.segment).zipWithIndex)
 	var dataGrpValue = ""
 
 	def applyTimestamp(ts: Long) {

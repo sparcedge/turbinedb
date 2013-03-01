@@ -10,7 +10,7 @@ object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
 	val GROUPING_LENGTH = 7 // 100000✈
-	val aggregateGrouping = Grouping("duration", Some("ihour"))
+	val aggregateGrouping = new IndexGrouping("hour")
 
 	def eventMatchesAllCriteria(event: Event, matches: Iterable[Match]): Boolean = {
 		matches foreach { matcher =>
@@ -24,9 +24,9 @@ object QueryUtil {
 	def createGroupStringForEvent(event: Event, groupings: Iterable[Grouping]): String = {
 		if(groupings.size > 0) {
 			val builder = new StringBuilder
-			builder.append(groupings.head.createGroup(event))
+			builder.append(groupings.head(event))
 			groupings.tail foreach { grouping =>
-				builder.append(GROUP_SEPARATOR).append(grouping.createGroup(event))
+				builder.append(GROUP_SEPARATOR).append(grouping(event))
 			}
 			builder.toString
 		} else {

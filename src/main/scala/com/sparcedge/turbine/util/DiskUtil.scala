@@ -2,7 +2,7 @@ package com.sparcedge.turbine.util
 
 import java.io._
 import com.sparcedge.turbine.event.Event
-import com.sparcedge.turbine.query.Blade
+import com.sparcedge.turbine.query.{Blade,Collection}
 import BinaryUtil._
 
 object DiskUtil {
@@ -11,7 +11,7 @@ object DiskUtil {
 	val DEFAULT_PAGE_SIZE = 1024 * 256
 
 	def getDirectoryForBlade(blade: Blade): String = {
-		BASE_PATH + "/" + blade.domain + "/" + blade.tenant + "/" + blade.category + "/" + blade.period
+		BASE_PATH + "/" + blade.collection.domain + "/" + blade.collection.tenant + "/" + blade.collection.category + "/" + blade.period
 	}
 
 	def getDataFileNameForBladeSegment(blade: Blade, segment: String): String = {
@@ -85,7 +85,7 @@ object DiskUtil {
 	def convertCacheFileToBlade(cacheFile: File): Blade = {
 		val path = cacheFile.getAbsolutePath
 		val tokens = path.substring(path.indexOf(BASE_PATH) + BASE_PATH.size).split("/")
-		new Blade(tokens(1), tokens(2), tokens(3), tokens(4))
+		new Blade(Collection(tokens(1), tokens(2), tokens(3)), tokens(4))
 	}
 
 	def recursiveListFilesAndDirs(f: File): Iterable[File] = {

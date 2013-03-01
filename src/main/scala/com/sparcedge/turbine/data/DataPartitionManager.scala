@@ -23,7 +23,7 @@ class DataPartitionManager(blade: Blade) extends Actor with BatchStorage[(String
 	val partition = new DataPartition(blade)
 	lazy val eventListener = TurbineManager.universalEventWrittenListener
 	val maxBatchSize = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-batched-events")
-	val maxTimeUnflushed = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.parition.max-time-batched")
+	val maxTimeUnflushed = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-time-batched")
 
 	def receive = batchReceive orElse {
 		case WriteEvent(id, event) =>

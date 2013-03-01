@@ -17,6 +17,8 @@ object BuildSettings {
 object Resolvers {
 	val typesafeRepo = "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/"
 	val sprayRepo = "Spray Repo" at "http://repo.spray.io"
+	val playJsonSnapRepo = "Mandubian repository snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/"
+	val playJsonRelRepo = "Mandubian repository releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/"
 }
 
 object Dependencies {
@@ -32,7 +34,7 @@ object Dependencies {
 	val sprayCan = "io.spray" % "spray-can" % sprayVersion
 	val sprayRouting = "io.spray" % "spray-routing" % sprayVersion
 
-	val jsonJackson = "org.json4s" %% "json4s-jackson" % "3.1.0"
+	val playJson = "play" %% "play-json" % "2.2-SNAPSHOT"
 	val jodaTime = "joda-time" % "joda-time" % "2.1"
 	val jodaConvert = "org.joda" % "joda-convert" % "1.2"
 	val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
@@ -42,7 +44,7 @@ object Dependencies {
 
 	val akkaDependencies = Seq(akkaActor, akkaRemote, akkaSlf4j, akkaTestkit, akkaCluster)
 	val sprayDependencies = Seq(sprayCan, sprayRouting)
-	val miscDependencies = Seq(jsonJackson, jodaTime, jodaConvert, slf4j, scalatest, journalio)
+	val miscDependencies = Seq(jodaTime, jodaConvert, slf4j, scalatest, journalio, playJson)
 	val allDependencies = akkaDependencies ++ sprayDependencies ++ miscDependencies
 }
 
@@ -54,7 +56,7 @@ object TurbineDB extends Build {
 		id = "turbine-db",
 		base = file("."),
 		settings = buildSettings ++ SbtOneJar.oneJarSettings ++ Seq (
-			resolvers ++= Seq(typesafeRepo, sprayRepo),
+			resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo),
 			libraryDependencies ++= Dependencies.allDependencies,
 			crossTarget := new File("/Users/bgilbert/projects/personal/turbine-db/build")
 		)

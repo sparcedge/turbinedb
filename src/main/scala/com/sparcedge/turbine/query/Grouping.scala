@@ -1,76 +1,59 @@
 package com.sparcedge.turbine.query
 
 import org.joda.time.format.DateTimeFormat
+import play.api.libs.json.Json
+import play.api.libs.json.{JsObject,JsString}
+
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.util.CrazierDateUtil._
 
-case class Grouping (`type`: String, value: Option[String]) {
-
-	val requiredSegment: String = `type` match {
-		case "duration" => "ts"
-		case "resource" => "resource"
-		case "segment" => value.get
+object Grouping {
+	def apply(jsObj: JsObject): Grouping = {
+		jsObj.fields.head match {
+			case ("segment", JsString(seg)) => new SegmentGrouping(seg)
+			case ("duration", JsString(dur)) => new DurationGrouping(dur)
+			case _ => throw new Exception("Invalid Grouping")
+		}
 	}
+}
 
-	val segment: Option[String] = `type` match {
-		case "duration" => None
-		case "resource" => Some("resource")
-		case "segment" => Some(value.get)
+trait Grouping {
+	val segment: String
+
+	def apply(ts: Long, monthStart: Long): String = ts.toString
+	def apply(ts: Long): String = ts.toString
+	def apply(numeric: Double): String = numeric.toString
+	def apply(str: String): String = str
+	def apply(event: Event): String = event(segment).getOrElse("").toString
+}
+
+class SegmentGrouping(val segment: String) extends Grouping
+
+class DurationGrouping(val duration: String) extends Grouping {
+	val segment = "ts"
+
+	override def apply(ts: Long): String = {
+		duration match {
+			case "year" => calculateYearCombined(ts).toString
+			case "month" => calculateMonthCombined(ts).toString
+			case "day" => calculateDayCombined(ts).toString
+			case "hour" => calculateHourCombined(ts).toString
+			case "minute" => calculateMinuteCombined(ts).toString
+			case _ => throw new Exception("Invalid Duration Value")
+		}
 	}
+}
 
-	def apply(ts: Long, monthStart: Long): String = {
-		val duration = value.get
-		if(duration == "ihour") {
+class IndexGrouping(val indexDuration: String) extends Grouping {
+	val segment = "ts"
+
+	override def apply(ts: Long, monthStart: Long): String = {
+		if(indexDuration == "hour") {
 			(calculateAbsoluteHourForMonth(ts, monthStart) | 100000).toString
-		} else if(duration == "iminute") {
+		} else if(indexDuration == "minute") {
 			(calculateAbsoluteMinuteForMonth(ts, monthStart) | 100000).toString
 		} else {
-			throw new Exception("Invalid Duration Value")	
-		}
-	}
-
-	def apply(ts: Long): String = {
-		if(`type` != "duration") {
-			throw new Exception(s"Only use timestamp with duration grouping! Found: ${`type`}")
-		}
-		val duration = value.get
-		convertDuration(ts, duration)
-	}
-
-	def apply(numeric: Double): String = {
-		numeric.toString
-	}
-
-	def apply(str: String): String = {
-		str
-	}
-
-	def convertDuration(ts: Long, duration: String): String = {
-		if(duration == "year") {
-			calculateYearCombined(ts).toString
-		} else if(duration == "month") {
-			calculateMonthCombined(ts).toString
-		} else if(duration == "day") {
-			calculateDayCombined(ts).toString
-		} else if(duration == "hour") {
-			calculateHourCombined(ts).toString
-		} else if(duration == "minute") {
-			calculateMinuteCombined(ts).toString
-		} else {
-			throw new Exception("Invalid Duration Value")
-		}
-	}
-
-	def createGroup(event: Event): String = {
-		if(`type` == "duration") {
-			val duration = value.get
-			convertDuration(event.ts, duration)
-		} else if(`type` == "resource") {
-			event("resource").getOrElse("").toString
-		} else if(`type` == "segment") {
-			event(value.get).getOrElse("").toString
-		} else {
-			throw new Exception("Bad Grouping Type")
+			throw new Exception("Invalid Index Duration Value")	
 		}
 	}
 }

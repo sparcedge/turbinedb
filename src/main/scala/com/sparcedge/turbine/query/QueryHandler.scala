@@ -59,17 +59,11 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
 	def requestBladeManagers(queryPackage: TurbineQueryPackage): Future[Iterable[ActorRef]] = {
 		val query = queryPackage.query
-		val sPeriod = monthFmt.print(query.range.start)
-		val ePeriodOpt = query.range.end.map(monthFmt.print)
-		val sBlade = Blade(queryPackage.domain, queryPackage.tenant, queryPackage.category, sPeriod)
-		
-		var msg = if(ePeriodOpt.isDefined) {
-			BladeManagerRangeRequest(sBlade, sBlade.copy(period = ePeriodOpt.get))
-		} else {
-			BladeManagerRangeUnboundedRequest(sBlade)
-		}
+		val sPeriodOpt = query.start.map(monthFmt.print)
+		val ePeriodOpt = query.end.map(monthFmt.print)
+		val req = BladeManagerRangeRequest(queryPackage.collection, sPeriodOpt, ePeriodOpt)
 
-		(bladeManagerRepository ? msg).mapTo[BladeManagerRangeResponse].map(_.managers.map(_._2))
+		(bladeManagerRepository ? req).mapTo[BladeManagerRangeResponse].map(_.managers.map(_._2))
 	}
 
 	def requestIndexActors(bladeManagers: Future[Iterable[ActorRef]], query: TurbineQuery): Future[Iterable[ActorRef]] = {
@@ -109,11 +103,11 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
 	private def sliceIndex(indexVal: Index, query: TurbineQuery): WrappedTreeMap[String,ReducedResult] = {
 		var sliced = indexVal.index
-		val lowerBoundBroken = query.range.start > indexVal.blade.periodStart.getMillis
-		var upperBoundBroken = query.range.end != None && query.range.end.get < indexVal.blade.periodEnd.getMillis
+		val lowerBoundBroken = query.start != None && query.start.get > indexVal.blade.periodStart.getMillis
+		var upperBoundBroken = query.end != None && query.end.get < indexVal.blade.periodEnd.getMillis
 
 		if(lowerBoundBroken) {
-			sliced = sliced.tailMap(query.startPlusMinute)
+			sliced = sliced.tailMap(query.startPlusMinute.get)
 		}
 		if(upperBoundBroken) {
 			sliced = sliced.headMap(query.endMinute.get)

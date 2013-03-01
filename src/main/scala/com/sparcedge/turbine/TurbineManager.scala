@@ -11,11 +11,11 @@ import journal.io.api.Journal
 import com.sparcedge.turbine.event.EventIngressPackage
 import com.sparcedge.turbine.data.{BladeManager,WriteHandler}
 import com.sparcedge.turbine.ejournal.{JournalReader,JournalWriter}
-import com.sparcedge.turbine.query.{TurbineQueryPackage,QueryHandler,Blade}
+import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandler,Blade,Collection}
 
 object TurbineManager {
-	case class QueryDispatchRequest(rawQuery: String, ctx: RequestContext)
-	case class AddEventRequest(rawEvent: String, ctx: RequestContext)
+	case class QueryDispatchRequest(rawQuery: String, domain: String, tenant: String, category: String, ctx: RequestContext)
+	case class AddEventRequest(rawEvent: String, domain: String, tenant: String, category: String, ctx: RequestContext)
 	// TODO: Nasty Nasty Hack
 	var universalEventWrittenListener: ActorRef = null
 }
@@ -31,14 +31,14 @@ class TurbineManager() extends Actor {
 	initializeJournal()
 
 	val bladeRepositoryManager = context.actorOf(Props(new BladeManagerRepository()), "BladeRepositoryManager")
-	val journalReader = context.actorOf (
-		Props(new JournalReader(journal, writeHandlerRouter)), "JournalReader"
+	val writeHandlerRouter = context.actorOf (
+		Props(new WriteHandler(bladeRepositoryManager)).withRouter(RoundRobinRouter(50)), "WriteHandlerRouter"
 	)
 	val queryHandlerRouter = context.actorOf (
 		Props(new QueryHandler(bladeRepositoryManager)).withRouter(RoundRobinRouter(50)), "QueryHandlerRouter"
-	)
-	val writeHandlerRouter = context.actorOf (
-		Props(new WriteHandler(bladeRepositoryManager)).withRouter(RoundRobinRouter(50)), "WriteHandlerRouter"
+	)	
+	val journalReader = context.actorOf (
+		Props(new JournalReader(journal, writeHandlerRouter)), "JournalReader"
 	)
 	val journalWriter = context.actorOf (
 		Props(new JournalWriter(journal)), "JournalWriter"
@@ -46,16 +46,18 @@ class TurbineManager() extends Actor {
 	universalEventWrittenListener = journalReader
 
 	def receive = {
-		case QueryDispatchRequest(rawQuery, ctx) =>
-			TurbineQueryPackage.tryParse(rawQuery) match {
-				case Success(queryPackage) =>
+		case QueryDispatchRequest(rawQuery, domain, tenant, category, ctx) =>
+			TurbineQuery.tryParse(rawQuery) match {
+				case Success(query) =>
+					val coll = Collection(domain, tenant, category)
+					val queryPackage = TurbineQueryPackage(coll, query)
 					queryHandlerRouter ! HandleQuery(queryPackage, ctx)
 				case Failure(err) =>
 					err.printStackTrace()
 					ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 			}
-		case AddEventRequest(rawEvent, ctx) =>
-			EventIngressPackage.tryParse(rawEvent) match {
+		case AddEventRequest(rawEvent, domain, tenant, category, ctx) =>
+			EventIngressPackage.tryParse(rawEvent, domain, tenant, category) match {
 				case Success(eventIngressPkg) =>
 					journalWriter ! WriteEventToJournal(eventIngressPkg, ctx)
 				case Failure(err) =>

@@ -2,13 +2,12 @@ package com.sparcedge.turbine
 
 import akka.actor.{Actor,Props,ActorSystem,ActorRef}
 
-import com.sparcedge.turbine.query.Blade
+import com.sparcedge.turbine.query.{Blade,Collection}
 import com.sparcedge.turbine.data.BladeManager
 import com.sparcedge.turbine.util.{WrappedTreeMap,DiskUtil}
 
 object BladeManagerRepository {
-	case class BladeManagerRangeRequest(sBlade: Blade, eBlade: Blade)
-	case class BladeManagerRangeUnboundedRequest(sBlade: Blade)
+	case class BladeManagerRangeRequest(coll: Collection, sPeriodOpt: Option[String], ePeriodOpt: Option[String])
 	case class BladeManagerRequest(blade: Blade)
 	case class BladeManagerGetOrCreateRequest(blade: Blade)
 	
@@ -30,19 +29,30 @@ class BladeManagerRepository() extends Actor {
 		case BladeManagerGetOrCreateRequest(blade) =>
 			val (newBlade,manager) = bladeManagerMap.getOrElseUpdate(blade.key, (blade -> createManagerForBlade(blade)))
 			sender ! BladeManagerGetOrCreateResponse(manager)
-		case BladeManagerRangeRequest(sBlade, eBlade) =>
-			sender ! BladeManagerRangeResponse(getBladeManagersInRange(sBlade, eBlade))
-		case BladeManagerRangeUnboundedRequest(sBlade) =>
-			sender ! BladeManagerRangeResponse(getBladeManagersInUnboundedRange(sBlade))
+		case BladeManagerRangeRequest(coll, sPeriodOpt, ePeriodOpt) =>
+			sender ! BladeManagerRangeResponse(getBladeManagersInRange(coll, sPeriodOpt, ePeriodOpt))
 		case _ =>
 	}
 
-	def getBladeManagersInUnboundedRange(sBlade: Blade): Iterable[(Blade,ActorRef)] = {
-		getBladeManagersInRange(sBlade, sBlade.copy(category = sBlade.category+1, period = "0001-01"))
+	def getBladeManagersInRange(coll: Collection, sPeriodOpt: Option[String], ePeriodOpt: Option[String]): Iterable[(Blade,ActorRef)] = {
+		(sPeriodOpt, ePeriodOpt) match {
+			case (Some(sPeriod), Some(ePeriod)) => getBladeManagersInRange(Blade(coll, sPeriod), Blade(coll, ePeriod))
+			case (Some(sPeriod), _) => getBladeManagersInRange(Blade(coll, sPeriod), getUpperBoundaryForCollection(coll))
+			case (_, Some(ePeriod)) => getBladeManagersInRange(getLowerBoundaryForCollection(coll), Blade(coll,ePeriod))
+			case _ => getBladeManagersInRange(getLowerBoundaryForCollection(coll), getUpperBoundaryForCollection(coll))
+		}
 	}
 
 	def getBladeManagersInRange(sBlade: Blade, eBlade: Blade): Iterable[(Blade,ActorRef)] = {
 		bladeManagerMap.subMap(sBlade.key, eBlade.key).values
+	}
+
+	def getUpperBoundaryForCollection(coll: Collection): Blade = {
+		Blade(coll.copy(category = coll.category+1), "0001-01")
+	}
+
+	def getLowerBoundaryForCollection(coll: Collection): Blade = {
+		Blade(coll, "0001-01")
 	}
 
 	def discoverAndInitializeExistingBlades() {

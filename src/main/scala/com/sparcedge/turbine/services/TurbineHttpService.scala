@@ -27,20 +27,26 @@ trait TurbineHttpService extends HttpService {
 				}
 			}
 		} ~
-		path("query") {
-			post {	
-				entity(as[String]) { rawQuery =>
-					respondWithMediaType(`application/json`) { ctx =>
-						turbineManager ! QueryDispatchRequest(rawQuery, ctx)
-					}
-				}
-			}
-		} ~
-		path("events") {
-			post {
-				entity(as[String]) { rawEvent =>
-					respondWithMediaType(`application/json`) { ctx =>
-						turbineManager ! AddEventRequest(rawEvent, ctx)
+		pathPrefix("db") {
+			pathPrefix(PathElement) { domain =>
+				pathPrefix(PathElement) { tenant =>
+					pathPrefix(PathElement) { category =>
+						path("") {
+							(get & parameter('q) ) { query =>
+								entity(as[String]) { rawQuery =>
+									respondWithMediaType(`application/json`) { ctx =>
+										turbineManager ! QueryDispatchRequest(query, domain, tenant, category, ctx)
+									}
+								}
+							} ~
+							post {
+								entity(as[String]) { rawEvent =>
+									respondWithMediaType(`application/json`) { ctx =>
+										turbineManager ! AddEventRequest(rawEvent, domain, tenant, category, ctx)
+									}
+								}
+							}
+						}
 					}
 				}
 			}
