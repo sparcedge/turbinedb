@@ -8,7 +8,7 @@ case class Blade(collection: Collection, period: String) {
 	val periodStartMS = periodStart.getMillis()
 	val periodEnd = periodStart.plusMonths(1)
 	val key = toString()
-	override def toString() = collection.domain + "." + collection.tenant + "." + collection.category + "." + period
+	override def toString() = collection.database + "." + collection.collection + "." + period
 }
 
-case class Collection(domain: String, tenant: String, category: String)
+case class Collection(database: String, collection: String)

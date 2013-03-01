@@ -8,14 +8,14 @@ import spray.routing.RequestContext
 import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 import journal.io.api.Journal
 
-import com.sparcedge.turbine.event.EventIngressPackage
+import com.sparcedge.turbine.event.{EventIngressPackage,IngressEvent}
 import com.sparcedge.turbine.data.{BladeManager,WriteHandler}
 import com.sparcedge.turbine.ejournal.{JournalReader,JournalWriter}
 import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandler}
 
 object TurbineManager {
-	case class QueryDispatchRequest(rawQuery: String, domain: String, tenant: String, category: String, ctx: RequestContext)
-	case class AddEventRequest(rawEvent: String, domain: String, tenant: String, category: String, ctx: RequestContext)
+	case class QueryDispatchRequest(rawQuery: String, collection: Collection, ctx: RequestContext)
+	case class AddEventRequest(rawEvent: String, collection: Collection, ctx: RequestContext)
 	// TODO: Nasty Nasty Hack
 	var universalEventWrittenListener: ActorRef = null
 }
@@ -46,19 +46,19 @@ class TurbineManager() extends Actor {
 	universalEventWrittenListener = journalReader
 
 	def receive = {
-		case QueryDispatchRequest(rawQuery, domain, tenant, category, ctx) =>
+		case QueryDispatchRequest(rawQuery, collection, ctx) =>
 			TurbineQuery.tryParse(rawQuery) match {
 				case Success(query) =>
-					val coll = Collection(domain, tenant, category)
-					val queryPackage = TurbineQueryPackage(coll, query)
+					val queryPackage = TurbineQueryPackage(collection, query)
 					queryHandlerRouter ! HandleQuery(queryPackage, ctx)
 				case Failure(err) =>
 					err.printStackTrace()
 					ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 			}
-		case AddEventRequest(rawEvent, domain, tenant, category, ctx) =>
-			EventIngressPackage.tryParse(rawEvent, domain, tenant, category) match {
-				case Success(eventIngressPkg) =>
+		case AddEventRequest(rawEvent, collection, ctx) =>
+			IngressEvent.tryParse(rawEvent) match {
+				case Success(ingressEvent) =>
+					val eventIngressPkg = EventIngressPackage(collection, ingressEvent)
 					journalWriter ! WriteEventToJournal(eventIngressPkg, ctx)
 				case Failure(err) =>
 					err.printStackTrace()

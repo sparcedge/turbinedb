@@ -16,7 +16,7 @@ object EventPackage {
 	def fromEventIngressPackage(eiPackage: EventIngressPackage): EventPackage = {
 		val event = convertIngressEventToEvent(eiPackage.event)
 		val period = formatter.print(new DateTime(event.ts))
-		EventPackage(Blade(Collection(eiPackage.domain, eiPackage.tenant, eiPackage.category), period), event)
+		EventPackage(Blade(eiPackage.collection, period), event)
 	}
 
 	def convertIngressEventToEvent(iEvent: IngressEvent): Event = {
@@ -35,18 +35,23 @@ object EventPackage {
 
 case class EventPackage(blade: Blade, event: Event)
 
-object EventIngressPackage {
+object IngressEvent {
 	implicit val iEventFormat = Json.format[IngressEvent]
-	implicit val eiPackageFormat = Json.format[EventIngressPackage]
-	val formatter = DateTimeFormat.forPattern("yyyy-MM")
 
-	def tryParse(eventJson: String, domain: String, tenant: String, category: String): Try[EventIngressPackage] = {
+	def tryParse(eventJson: String): Try[IngressEvent] = {
 		Try {
 			val json = Json.parse(eventJson)
-			val iEvent = json.as[IngressEvent]
-			EventIngressPackage(domain, tenant, category, iEvent)
+			json.as[IngressEvent]
 		}
 	}
+}
+
+case class IngressEvent(timestamp: Long, data: JsObject)
+
+object EventIngressPackage {
+	implicit val iEventFormat = Json.format[IngressEvent]
+	implicit val collectionFormat = Json.format[Collection]
+	implicit val eiPackageFormat = Json.format[EventIngressPackage]	
 
 	def toBytes(eventPkg: EventIngressPackage): Array[Byte] = {
 		Json.stringify(Json.toJson(eventPkg)).getBytes
@@ -58,6 +63,4 @@ object EventIngressPackage {
 	}
 }
 
-case class EventIngressPackage(domain: String, tenant: String, category: String, event: IngressEvent)
-
-case class IngressEvent(timestamp: Long, data: JsObject)
+case class EventIngressPackage(collection: Collection, event: IngressEvent)

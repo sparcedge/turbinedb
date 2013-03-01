@@ -51,7 +51,7 @@ class BladeManagerRepository() extends Actor {
 	}
 
 	def getUpperBoundaryForCollection(coll: Collection): Blade = {
-		Blade(coll.copy(category = coll.category+1), "0001-01")
+		Blade(coll.copy(collection = coll.collection+1), "0001-01")
 	}
 
 	def getLowerBoundaryForCollection(coll: Collection): Blade = {

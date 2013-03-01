@@ -9,6 +9,7 @@ import spray.http._
 import HttpMethods._
 import MediaTypes._
 
+import com.sparcedge.turbine.Collection
 import com.sparcedge.turbine.TurbineManager._
 
 class TurbineHttpServiceActor(val turbineManager: ActorRef) extends Actor with TurbineHttpService {
@@ -27,24 +28,20 @@ trait TurbineHttpService extends HttpService {
 				}
 			}
 		} ~
-		pathPrefix("db") {
-			pathPrefix(PathElement) { domain =>
-				pathPrefix(PathElement) { tenant =>
-					pathPrefix(PathElement) { category =>
-						path("") {
-							(get & parameter('q) ) { query =>
-								entity(as[String]) { rawQuery =>
-									respondWithMediaType(`application/json`) { ctx =>
-										turbineManager ! QueryDispatchRequest(query, domain, tenant, category, ctx)
-									}
-								}
-							} ~
-							post {
-								entity(as[String]) { rawEvent =>
-									respondWithMediaType(`application/json`) { ctx =>
-										turbineManager ! AddEventRequest(rawEvent, domain, tenant, category, ctx)
-									}
-								}
+		pathPrefix("db" / PathElement) { database =>
+			pathPrefix(PathElement) { collection =>
+				path("") {
+					(get & parameter('q) ) { query =>
+						entity(as[String]) { rawQuery =>
+							respondWithMediaType(`application/json`) { ctx =>
+								turbineManager ! QueryDispatchRequest(query, Collection(database, collection), ctx)
+							}
+						}
+					} ~
+					post {
+						entity(as[String]) { rawEvent =>
+							respondWithMediaType(`application/json`) { ctx =>
+								turbineManager ! AddEventRequest(rawEvent, Collection(database, collection), ctx)
 							}
 						}
 					}
