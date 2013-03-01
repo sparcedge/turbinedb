@@ -1,4 +1,4 @@
-package com.sparcedge.turbine.query
+package com.sparcedge.turbine
 
 import org.joda.time.format.DateTimeFormat
 

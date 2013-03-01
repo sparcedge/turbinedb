@@ -15,7 +15,7 @@ import com.sparcedge.turbine.event.{EventPackage,EventIngressPackage,Event}
 import com.sparcedge.turbine.BladeManagerRepository
 import com.sparcedge.turbine.util.{WrappedTreeMap,CustomJsonSerializer}
 import com.sparcedge.turbine.data._
-import com.sparcedge.turbine.query.Blade
+import com.sparcedge.turbine.Blade
 
 object WriteHandler {
 	case class WriteEventRequest(id: String, eventPkgBytes: Array[Byte])

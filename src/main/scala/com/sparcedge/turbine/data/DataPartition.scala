@@ -6,7 +6,8 @@ import akka.actor.ActorRef
 
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.util.{DiskUtil,Timer,CustomByteBuffer}
-import com.sparcedge.turbine.query.{Blade,Match,Grouping}
+import com.sparcedge.turbine.query.{Match,Grouping}
+import com.sparcedge.turbine.Blade
 
 import com.sparcedge.turbine.util.DiskUtil._
 import com.sparcedge.turbine.util.BinaryUtil._

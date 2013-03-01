@@ -1,7 +1,9 @@
 package com.sparcedge.turbine.data
 
 import scala.collection.mutable
-import com.sparcedge.turbine.query.{Grouping,Blade}
+
+import com.sparcedge.turbine.query.Grouping
+import com.sparcedge.turbine.Blade
 import QueryUtil._
 
 class GroupStringBuilder(dataGrouping: Grouping, groupings: Iterable[Grouping], blade: Blade) {

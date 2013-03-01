@@ -2,7 +2,6 @@ package com.sparcedge.turbine
 
 import akka.actor.{Actor,Props,ActorSystem,ActorRef}
 
-import com.sparcedge.turbine.query.{Blade,Collection}
 import com.sparcedge.turbine.data.BladeManager
 import com.sparcedge.turbine.util.{WrappedTreeMap,DiskUtil}
 

@@ -11,7 +11,7 @@ import journal.io.api.Journal
 import com.sparcedge.turbine.event.EventIngressPackage
 import com.sparcedge.turbine.data.{BladeManager,WriteHandler}
 import com.sparcedge.turbine.ejournal.{JournalReader,JournalWriter}
-import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandler,Blade,Collection}
+import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandler}
 
 object TurbineManager {
 	case class QueryDispatchRequest(rawQuery: String, domain: String, tenant: String, category: String, ctx: RequestContext)

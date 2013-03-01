@@ -2,9 +2,11 @@ package com.sparcedge.turbine.data
 
 import akka.actor.{Actor,ActorRef,Props}
 import scala.collection.mutable
+import scala.util.Random
+
 import com.sparcedge.turbine.query._
 import com.sparcedge.turbine.event.Event
-import scala.util.Random
+import com.sparcedge.turbine.Blade
 
 object BladeManager {
 	case class IndexesRequest(query: TurbineQuery)

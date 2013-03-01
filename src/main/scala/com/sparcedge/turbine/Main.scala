@@ -8,7 +8,6 @@ import com.typesafe.config.ConfigFactory
 
 import com.sparcedge.turbine.services.TurbineHttpServiceActor
 import com.sparcedge.turbine.util.{Timer,DiskUtil}
-import com.sparcedge.turbine.query.Blade
 
 
 object Main extends App with SprayCanHttpServerApp {

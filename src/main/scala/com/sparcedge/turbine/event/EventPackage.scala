@@ -8,7 +8,7 @@ import play.api.libs.json.Json
 import play.api.libs.json.{JsObject,JsNumber,JsString}
 
 import com.sparcedge.turbine.data.IndexKey
-import com.sparcedge.turbine.query.{Blade,Collection}
+import com.sparcedge.turbine.{Blade,Collection}
 
 object EventPackage {
 	val formatter = DateTimeFormat.forPattern("yyyy-MM")

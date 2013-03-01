@@ -3,10 +3,11 @@ package com.sparcedge.turbine.data
 import akka.actor.{Actor,ActorRef}
 import scala.util.{Try,Success,Failure}
 import scala.concurrent.{future,ExecutionContext}
+
 import com.sparcedge.turbine.event.Event
-import com.sparcedge.turbine.query.{Blade,Match,Grouping}
+import com.sparcedge.turbine.query.{Match,Grouping}
 import com.sparcedge.turbine.ejournal.JournalReader
-import com.sparcedge.turbine.{BatchStorage,TurbineManager}
+import com.sparcedge.turbine.{BatchStorage,TurbineManager,Blade}
 
 object DataPartitionManager {
 	case class WriteEvent(id: String, event: Event)

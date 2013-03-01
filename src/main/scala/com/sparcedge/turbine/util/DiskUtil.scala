@@ -2,7 +2,7 @@ package com.sparcedge.turbine.util
 
 import java.io._
 import com.sparcedge.turbine.event.Event
-import com.sparcedge.turbine.query.{Blade,Collection}
+import com.sparcedge.turbine.{Blade,Collection}
 import BinaryUtil._
 
 object DiskUtil {
