@@ -1,6 +1,6 @@
 package com.sparcedge.turbine.data
 
-import akka.actor.{Actor,ActorRef}
+import akka.actor.{Actor,ActorRef,ActorLogging}
 import scala.util.{Try,Success,Failure}
 import scala.concurrent.{future,ExecutionContext}
 
@@ -18,10 +18,11 @@ import AggregateIndex._
 import DataPartitionManager._
 import JournalReader._
 
-class DataPartitionManager(blade: Blade) extends Actor with BatchStorage[(String,Event)] {
+class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with BatchStorage[(String,Event)] {
 	import context.dispatcher
 
 	val partition = new DataPartition(blade)
+	log.info("Created data partition: {}", blade.key)
 	lazy val eventListener = TurbineManager.universalEventWrittenListener
 	val maxBatchSize = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-batched-events")
 	val maxTimeUnflushed = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-time-batched")
@@ -40,6 +41,7 @@ class DataPartitionManager(blade: Blade) extends Actor with BatchStorage[(String
 	}
 
 	def flushBatch(batch: Iterable[(String,Event)]) {
+		log.debug("Writing {} events to disk ({})", batch.size, blade.key)
 		partition.writeEvents(batch.map(_._2))
 		eventListener ! EventsWrittenToDisk(batch.map(_._1))
 	}

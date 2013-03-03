@@ -1,6 +1,6 @@
 package com.sparcedge.turbine.data
 
-import akka.actor.{Actor,ActorRef,Props}
+import akka.actor.{Actor,ActorRef,Props,ActorLogging}
 import scala.collection.mutable
 import scala.util.Random
 
@@ -18,7 +18,7 @@ import BladeManager._
 import DataPartitionManager._
 import AggregateIndex._
 
-class BladeManager(blade: Blade) extends Actor {
+class BladeManager(blade: Blade) extends Actor with ActorLogging {
 
 	val partitionManager = context.actorOf (
 		Props(new DataPartitionManager(blade)).withDispatcher("com.sparcedge.turbinedb.data-partition-dispatcher"), 
@@ -29,18 +29,15 @@ class BladeManager(blade: Blade) extends Actor {
 
 	def receive = {
 		case IndexesRequest(query) =>
-			println("Receieved Indexes Request")
 			val newIndexes = mutable.ListBuffer[Index]()
 
 			val indexes = retrieveIndexKeysFromQuery(query) map { key => 
 				indexMap.getOrElseUpdate(key.id, createAggregateIndex(key, newIndexes))
 			}
-			println("Got / Created Indexes")
 			if(newIndexes.size > 0) {
 				beginIndexPopulation(newIndexes)
 			}
 			sender ! IndexesResponse(indexes)
-			println("Responded With Indexes")
 		case AddEvent(id, event) =>
 			partitionManager ! WriteEvent(id, event)
 			// TODO: Efficiency
@@ -53,6 +50,7 @@ class BladeManager(blade: Blade) extends Actor {
 	}
 
 	def createAggregateIndex(key: IndexKey, newIndexes: mutable.ListBuffer[Index]): ActorRef = {
+		log.debug("Creating new index: {}", key.id)
 		val indexActor = context.actorOf(Props(new AggregateIndex(key, blade)).withDispatcher("com.sparcedge.turbinedb.agg-index-dispatcher"), key.id)
 		val index = new Index(key, indexActor, blade)
 		index +=: newIndexes
@@ -66,7 +64,7 @@ class BladeManager(blade: Blade) extends Actor {
 
 case class IndexKey (reducer: CoreReducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
 	val uniqueMatchStr = matches.map(_.uniqueId).toList.sorted.mkString(".")
-	val uniqueGroupStr = groupings.map(_.uniqueId).toList.sorted.mkString(".")
+	val uniqueGroupStr = groupings.map(_.uniqueId).toList.mkString(".")
 	val id = s"${reducer.reducer}.${reducer.segment}.${uniqueMatchStr}.${uniqueGroupStr}"
 }
 

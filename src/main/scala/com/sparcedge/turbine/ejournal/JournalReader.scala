@@ -3,7 +3,7 @@ package com.sparcedge.turbine.ejournal
 import scala.collection.JavaConversions._
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.{Actor,ActorRef,Props}
+import akka.actor.{Actor,ActorRef,Props,ActorLogging}
 import scala.concurrent.duration._
 import journal.io.api.{Journal,Location}
 import Journal.ReadType
@@ -20,7 +20,7 @@ object JournalReader {
 import JournalReader._
 import WriteHandler._
 
-class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Actor {
+class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Actor with ActorLogging {
 
 	val eventLocations = mutable.Map[String,Location]()
 	val processJournalDelay = context.system.settings.config.getInt("com.sparcedge.turbinedb.journal.process-delay")
@@ -36,6 +36,7 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 				removeEventFromJournal(id)
 			}
 		case ProcessJournalEvents =>
+			log.debug("Processing Journal Events")
 			processJournalEvents()
 		case _ =>
 	}
@@ -44,6 +45,7 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 		eventLocations.remove(id) foreach { location =>
 			journal.delete(location)
 		}
+		log.debug("Removed event from journal: {}", id)
 	}
 
 	def processJournalEvents() {

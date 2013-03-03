@@ -1,6 +1,6 @@
 package com.sparcedge.turbine
 
-import akka.actor.{Actor,Props,ActorSystem,ActorRef}
+import akka.actor.{Actor,Props,ActorSystem,ActorRef,ActorLogging}
 
 import com.sparcedge.turbine.data.BladeManager
 import com.sparcedge.turbine.util.{WrappedTreeMap,DiskUtil}
@@ -17,7 +17,7 @@ object BladeManagerRepository {
 
 import BladeManagerRepository._
 
-class BladeManagerRepository() extends Actor {
+class BladeManagerRepository() extends Actor with ActorLogging {
 
 	val bladeManagerMap = new WrappedTreeMap[String,(Blade,ActorRef)]()
 	discoverAndInitializeExistingBlades()
@@ -56,6 +56,7 @@ class BladeManagerRepository() extends Actor {
 
 	def discoverAndInitializeExistingBlades() {
 		val existingBlades = DiskUtil.retrieveBladesFromExistingData()
+		log.info("Initialized {} Blade Managers for Existing Data Partitions")
 		initializeBlades(existingBlades)
 	}
 

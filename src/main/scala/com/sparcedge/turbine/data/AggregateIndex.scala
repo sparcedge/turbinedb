@@ -1,6 +1,6 @@
 package com.sparcedge.turbine.data
 
-import akka.actor.{Actor,ActorRef,Stash}
+import akka.actor.{Actor,ActorRef,Stash,ActorLogging}
 import java.util.HashMap
 import scala.collection.mutable
 
@@ -21,7 +21,7 @@ object AggregateIndex {
 import AggregateIndex._
 import DataPartitionManager._
 
-class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with Stash {
+class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with ActorLogging with Stash {
 
 	var cnt = 0
 	var index: Index = null
@@ -35,6 +35,7 @@ class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with Stash 
 			index = populatedIndex
 			unstashAll()
 			context.become(initializedReceive)
+			log.debug("Index population complete ({})", indexKey.id)
 		case _ =>
   	}
 

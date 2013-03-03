@@ -2,8 +2,8 @@ package com.sparcedge.turbine
 
 import java.io.File
 import scala.util.{Try,Success,Failure}
-import akka.actor.{Actor,Props,ActorSystem,ActorRef}
-import akka.routing.RoundRobinRouter
+import akka.actor.{Actor,Props,ActorSystem,ActorRef,ActorLogging}
+import akka.routing.FromConfig
 import spray.routing.RequestContext
 import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 import journal.io.api.Journal
@@ -12,6 +12,15 @@ import com.sparcedge.turbine.event.{EventIngressPackage,IngressEvent}
 import com.sparcedge.turbine.data.{BladeManager,WriteHandler}
 import com.sparcedge.turbine.ejournal.{JournalReader,JournalWriter}
 import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandler}
+
+trait TurbineManagerProvider {
+	def newJournal: Journal = new Journal
+	def newBladeManagerRepository: Actor = new BladeManagerRepository()
+	def newWriteHandler(bladeManRepo: ActorRef): Actor = new WriteHandler(bladeManRepo)
+	def newQueryHandler(bladeManRepo: ActorRef): Actor = new QueryHandler(bladeManRepo)
+	def newJournalReader(journal: Journal, writeHandlerRouter: ActorRef): Actor = new JournalReader(journal, writeHandlerRouter)
+	def newJournalWriter(journal: Journal): Actor = new JournalWriter(journal)
+}
 
 object TurbineManager {
 	case class QueryDispatchRequest(rawQuery: String, collection: Collection, ctx: RequestContext)
@@ -25,24 +34,34 @@ import QueryHandler._
 import BladeManager._
 import JournalWriter._
 
-class TurbineManager() extends Actor {
+class TurbineManager() extends Actor with TurbineManagerProvider with ActorLogging {
 
-	val journal = new Journal
+	val journal = newJournal
 	initializeJournal()
 
-	val bladeRepositoryManager = context.actorOf(Props(new BladeManagerRepository()), "BladeRepositoryManager")
+	val bladeRepositoryManager = context.actorOf(Props(newBladeManagerRepository), "BladeRepositoryManager")
+	log.info("Created BladeManagerRepository")
+
 	val writeHandlerRouter = context.actorOf (
-		Props(new WriteHandler(bladeRepositoryManager)).withRouter(RoundRobinRouter(50)), "WriteHandlerRouter"
+		Props(new WriteHandler(bladeRepositoryManager)).withRouter(FromConfig()), "WriteHandlerRouter"
 	)
+	log.info("Created WriteHandlerRouter")
+
 	val queryHandlerRouter = context.actorOf (
-		Props(new QueryHandler(bladeRepositoryManager)).withRouter(RoundRobinRouter(50)), "QueryHandlerRouter"
-	)	
+		Props(new QueryHandler(bladeRepositoryManager)).withRouter(FromConfig()), "QueryHandlerRouter"
+	)
+	log.info("Created WriteHandlerRouter")
+
 	val journalReader = context.actorOf (
-		Props(new JournalReader(journal, writeHandlerRouter)), "JournalReader"
+		Props(newJournalReader(journal, writeHandlerRouter)), "JournalReader"
 	)
+	log.info("Created JournalReader")
+
 	val journalWriter = context.actorOf (
-		Props(new JournalWriter(journal)), "JournalWriter"
+		Props(newJournalWriter(journal)), "JournalWriter"
 	)
+	log.info("Created JournalWriter")
+
 	universalEventWrittenListener = journalReader
 
 	def receive = {
@@ -52,7 +71,7 @@ class TurbineManager() extends Actor {
 					val queryPackage = TurbineQueryPackage(collection, query)
 					queryHandlerRouter ! HandleQuery(queryPackage, ctx)
 				case Failure(err) =>
-					err.printStackTrace()
+					log.error(err, "Failed parsing query from dispatch request")
 					ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 			}
 		case AddEventRequest(rawEvent, collection, ctx) =>
@@ -61,7 +80,7 @@ class TurbineManager() extends Actor {
 					val eventIngressPkg = EventIngressPackage(collection, ingressEvent)
 					journalWriter ! WriteEventToJournal(eventIngressPkg, ctx)
 				case Failure(err) =>
-					err.printStackTrace()
+					log.error(err, "Failed parsing event from add event request")
 					ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 			}
 		case _ =>
@@ -72,6 +91,7 @@ class TurbineManager() extends Actor {
 		ensureJournalDirectoryExists(journalDir)
 		journal.setDirectory(new File(journalDir))
 		journal.open()
+		log.info("Intialized Journal at location: {}", journalDir)
 	}
 
 	def ensureJournalDirectoryExists(dir: String) {

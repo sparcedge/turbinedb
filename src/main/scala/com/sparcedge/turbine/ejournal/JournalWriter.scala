@@ -1,7 +1,7 @@
 package com.sparcedge.turbine.ejournal
 
 import scala.collection.mutable
-import akka.actor.{Actor,ActorRef,Props}
+import akka.actor.{Actor,ActorRef,Props,ActorLogging}
 import akka.routing.RoundRobinRouter
 import journal.io.api.{Journal,Location}
 import Journal.WriteType
@@ -17,7 +17,7 @@ object JournalWriter {
 import JournalWriter._
 import HttpResponder._
 
-class JournalWriter(journal: Journal) extends Actor with BatchBehavior {
+class JournalWriter(journal: Journal) extends Actor with BatchBehavior with ActorLogging {
 
 	val responder = context.actorOf (
 		Props[HttpResponder].
@@ -44,6 +44,7 @@ class JournalWriter(journal: Journal) extends Actor with BatchBehavior {
 	}
 
 	def flushBatch() {
+		log.debug("Syncing Journal to Disk and Completing Requests")
 		journal.sync()
 		acknowledgeAndClearRequests()
 	}
