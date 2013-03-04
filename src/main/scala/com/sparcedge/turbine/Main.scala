@@ -9,6 +9,8 @@ import com.typesafe.config.ConfigFactory
 
 import com.sparcedge.turbine.services.TurbineHttpServiceActor
 import com.sparcedge.turbine.util.{Timer,DiskUtil}
+import com.sparcedge.turbine.data.QueryUtil
+import com.sparcedge.turbine.query.IndexGrouping
 
 
 object Main extends App with SprayCanHttpServerApp {
@@ -25,13 +27,15 @@ object Main extends App with SprayCanHttpServerApp {
 	val actorSystem = ActorSystem("TurbineActorSystem", appConfig)
 	val printTimings = appConfig.getBoolean("com.sparcedge.turbinedb.print-timings")
 	val dataDirectory = appConfig.getString("com.sparcedge.turbinedb.data.directory")
+	val indexResolution = appConfig.getString("com.sparcedge.turbinedb.data.index-resolution")
 	val logger = Logging.getLogger(actorSystem, this);
 
-	val turbineManager = actorSystem.actorOf(Props[TurbineManager], name = "TurbineManager")
+	val turbineManager = actorSystem.actorOf(Props(new TurbineManager with TurbineManagerProvider), name = "TurbineManager")
 	logger.info("Created Turbine Manager")
 
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
+	QueryUtil.DATA_GROUPING = new IndexGrouping(indexResolution)
 	logger.info("Using DataDirectory: {}", dataDirectory)
 
 	val handler = system.actorOf(Props(new TurbineHttpServiceActor(turbineManager)).withDispatcher("com.sparcedge.turbinedb.http-dispatcher"))

@@ -2,7 +2,7 @@ package com.sparcedge.turbine
 
 import akka.actor.{Actor,Props,ActorSystem,ActorRef,ActorLogging}
 
-import com.sparcedge.turbine.data.BladeManager
+import com.sparcedge.turbine.data.{BladeManager,BladeManagerProvider}
 import com.sparcedge.turbine.util.{WrappedTreeMap,DiskUtil}
 
 object BladeManagerRepository {
@@ -17,7 +17,7 @@ object BladeManagerRepository {
 
 import BladeManagerRepository._
 
-class BladeManagerRepository() extends Actor with ActorLogging {
+class BladeManagerRepository() extends Actor with ActorLogging { this: BladeManagerRepositoryProvider =>
 
 	val bladeManagerMap = new WrappedTreeMap[String,(Blade,ActorRef)]()
 	discoverAndInitializeExistingBlades()
@@ -67,6 +67,10 @@ class BladeManagerRepository() extends Actor with ActorLogging {
 	}
 
 	def createManagerForBlade(blade: Blade): ActorRef = {
-		context.actorOf(Props(new BladeManager(blade)), name = blade.toString)
+		context.actorOf(Props(newBladeManager(blade)), name = blade.toString)
 	}
+}
+
+trait BladeManagerRepositoryProvider {
+	def newBladeManager(blade: Blade): Actor = new BladeManager(blade) with BladeManagerProvider
 }

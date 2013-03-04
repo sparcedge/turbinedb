@@ -18,10 +18,10 @@ import BladeManager._
 import DataPartitionManager._
 import AggregateIndex._
 
-class BladeManager(blade: Blade) extends Actor with ActorLogging {
+class BladeManager(blade: Blade) extends Actor with ActorLogging { this: BladeManagerProvider =>
 
 	val partitionManager = context.actorOf (
-		Props(new DataPartitionManager(blade)).withDispatcher("com.sparcedge.turbinedb.data-partition-dispatcher"), 
+		Props(newDataPartitionManager(blade)).withDispatcher("com.sparcedge.turbinedb.data-partition-dispatcher"), 
 		s"${blade.toString}-partition-manager"
 	)
 
@@ -51,7 +51,7 @@ class BladeManager(blade: Blade) extends Actor with ActorLogging {
 
 	def createAggregateIndex(key: IndexKey, newIndexes: mutable.ListBuffer[Index]): ActorRef = {
 		log.debug("Creating new index: {}", key.id)
-		val indexActor = context.actorOf(Props(new AggregateIndex(key, blade)).withDispatcher("com.sparcedge.turbinedb.agg-index-dispatcher"), key.id)
+		val indexActor = context.actorOf(Props(newAggregateIndex(key, blade)).withDispatcher("com.sparcedge.turbinedb.agg-index-dispatcher"), key.id)
 		val index = new Index(key, indexActor, blade)
 		index +=: newIndexes
 		indexActor
@@ -68,7 +68,10 @@ case class IndexKey (reducer: CoreReducer, matches: Iterable[Match], groupings: 
 	val id = s"${reducer.reducer}.${reducer.segment}.${uniqueMatchStr}.${uniqueGroupStr}"
 }
 
-
+trait BladeManagerProvider {
+	def newDataPartitionManager(blade: Blade): Actor = new DataPartitionManager(blade) with DataPartitionManagerProvider
+	def newAggregateIndex(key: IndexKey, blade: Blade): Actor = new AggregateIndex(key, blade)
+}
 
 
 

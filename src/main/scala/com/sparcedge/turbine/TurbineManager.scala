@@ -13,15 +13,6 @@ import com.sparcedge.turbine.data.{BladeManager,WriteHandler}
 import com.sparcedge.turbine.ejournal.{JournalReader,JournalWriter}
 import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandler}
 
-trait TurbineManagerProvider {
-	def newJournal: Journal = new Journal
-	def newBladeManagerRepository: Actor = new BladeManagerRepository()
-	def newWriteHandler(bladeManRepo: ActorRef): Actor = new WriteHandler(bladeManRepo)
-	def newQueryHandler(bladeManRepo: ActorRef): Actor = new QueryHandler(bladeManRepo)
-	def newJournalReader(journal: Journal, writeHandlerRouter: ActorRef): Actor = new JournalReader(journal, writeHandlerRouter)
-	def newJournalWriter(journal: Journal): Actor = new JournalWriter(journal)
-}
-
 object TurbineManager {
 	case class QueryDispatchRequest(rawQuery: String, collection: Collection, ctx: RequestContext)
 	case class AddEventRequest(rawEvent: String, collection: Collection, ctx: RequestContext)
@@ -34,10 +25,9 @@ import QueryHandler._
 import BladeManager._
 import JournalWriter._
 
-class TurbineManager() extends Actor with TurbineManagerProvider with ActorLogging {
+class TurbineManager() extends Actor with ActorLogging { this: TurbineManagerProvider =>
 
-	val journal = newJournal
-	initializeJournal()
+	val journal = newInitializedJournal
 
 	val bladeRepositoryManager = context.actorOf(Props(newBladeManagerRepository), "BladeRepositoryManager")
 	log.info("Created BladeManagerRepository")
@@ -85,13 +75,23 @@ class TurbineManager() extends Actor with TurbineManagerProvider with ActorLoggi
 			}
 		case _ =>
 	}
+}
 
-	def initializeJournal() {
+trait TurbineManagerProvider { this: Actor with ActorLogging =>
+	def newInitializedJournal: Journal = initializeJournal(new Journal)
+	def newBladeManagerRepository: Actor = new BladeManagerRepository with BladeManagerRepositoryProvider
+	def newWriteHandler(bladeManRepo: ActorRef): Actor = new WriteHandler(bladeManRepo)
+	def newQueryHandler(bladeManRepo: ActorRef): Actor = new QueryHandler(bladeManRepo)
+	def newJournalReader(journal: Journal, writeHandlerRouter: ActorRef): Actor = new JournalReader(journal, writeHandlerRouter)
+	def newJournalWriter(journal: Journal): Actor = new JournalWriter(journal)
+
+	def initializeJournal(journal: Journal): Journal = {
 		val journalDir = context.system.settings.config.getString("com.sparcedge.turbinedb.journal.directory")
 		ensureJournalDirectoryExists(journalDir)
 		journal.setDirectory(new File(journalDir))
 		journal.open()
 		log.info("Intialized Journal at location: {}", journalDir)
+		journal
 	}
 
 	def ensureJournalDirectoryExists(dir: String) {

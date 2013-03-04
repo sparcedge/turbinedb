@@ -12,7 +12,8 @@ object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
 	val GROUPING_LENGTH = 6 // 100000
-	val DATA_GROUPING = new IndexGrouping("hour")
+	// TODO: Not good!
+	var DATA_GROUPING = new IndexGrouping("hour")
 
 	def eventMatchesAllCriteria(event: Event, matches: Iterable[Match]): Boolean = {
 		matches foreach { matcher =>

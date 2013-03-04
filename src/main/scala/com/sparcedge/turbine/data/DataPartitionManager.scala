@@ -18,10 +18,10 @@ import AggregateIndex._
 import DataPartitionManager._
 import JournalReader._
 
-class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with BatchStorage[(String,Event)] {
+class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with BatchStorage[(String,Event)] { this: DataPartitionManagerProvider =>
 	import context.dispatcher
 
-	val partition = new DataPartition(blade)
+	val partition = newDataPartition(blade)
 	log.info("Created data partition: {}", blade.key)
 	lazy val eventListener = TurbineManager.universalEventWrittenListener
 	val maxBatchSize = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-batched-events")
@@ -45,4 +45,8 @@ class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with Ba
 		partition.writeEvents(batch.map(_._2))
 		eventListener ! EventsWrittenToDisk(batch.map(_._1))
 	}
+}
+
+trait DataPartitionManagerProvider {
+	def newDataPartition(blade: Blade): DataPartition = new DataPartition(blade)
 }
