@@ -43,7 +43,7 @@ class BladeManagerRepository() extends Actor with ActorLogging { this: BladeMana
 	}
 
 	def getBladeManagersInRange(sBlade: Blade, eBlade: Blade): Iterable[(Blade,ActorRef)] = {
-		bladeManagerMap.subMap(sBlade.key, eBlade.key).values
+		bladeManagerMap.subMap(sBlade.key, true, eBlade.key, true).values
 	}
 
 	def getUpperBoundaryForCollection(coll: Collection): Blade = {

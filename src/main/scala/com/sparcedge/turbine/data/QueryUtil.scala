@@ -11,7 +11,7 @@ import com.sparcedge.turbine.Blade
 object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
-	val GROUPING_LENGTH = 6 // 100000
+	val GROUPING_LENGTH = 7 // 100000✈
 	// TODO: Not good!
 	var DATA_GROUPING = new IndexGrouping("hour")
 
@@ -25,7 +25,7 @@ object QueryUtil {
 	}
 
 	def createDataGroupString(event: Event, blade: Blade, groupings: Iterable[Grouping]): String = {
-		new StringBuilder(DATA_GROUPING(event.ts, blade.periodStartMS)).append(createGroupString(event,groupings)).toString
+		new StringBuilder(DATA_GROUPING(event.ts, blade.periodStartMS)).append(GROUP_SEPARATOR).append(createGroupString(event,groupings)).toString
 	}
 
 	def createGroupString(event: Event, groupings: Iterable[Grouping]): String = {
@@ -44,10 +44,7 @@ object QueryUtil {
 	def createGroupString(dataGrpValue: String, grpValues: Array[String]): String = {
 		val builder = new StringBuilder
 		builder.append(dataGrpValue)
-		if(grpValues.length > 0) {
-			builder.append(grpValues(0))
-		}
-		var cnt = 1
+		var cnt = 0
 		while(cnt < grpValues.length) {
 			builder.append(GROUP_SEPARATOR).append(grpValues(cnt))
 			cnt += 1

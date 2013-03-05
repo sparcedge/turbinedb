@@ -30,13 +30,13 @@ object Main extends App with SprayCanHttpServerApp {
 	val indexResolution = appConfig.getString("com.sparcedge.turbinedb.data.index-resolution")
 	val logger = Logging.getLogger(actorSystem, this);
 
-	val turbineManager = actorSystem.actorOf(Props(new TurbineManager with TurbineManagerProvider), name = "TurbineManager")
-	logger.info("Created Turbine Manager")
-
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
 	QueryUtil.DATA_GROUPING = new IndexGrouping(indexResolution)
 	logger.info("Using DataDirectory: {}", dataDirectory)
+
+	val turbineManager = actorSystem.actorOf(Props(new TurbineManager with TurbineManagerProvider), name = "TurbineManager")
+	logger.info("Created Turbine Manager")
 
 	val handler = system.actorOf(Props(new TurbineHttpServiceActor(turbineManager)).withDispatcher("com.sparcedge.turbinedb.http-dispatcher"))
 	newHttpServer(handler) ! Bind(interface = "localhost", port = 8080)

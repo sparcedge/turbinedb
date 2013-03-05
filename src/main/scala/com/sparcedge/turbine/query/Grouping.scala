@@ -75,9 +75,9 @@ class IndexGrouping(val indexDuration: String) extends Grouping {
 
 	override def apply(ts: Long, monthStart: Long): String = {
 		if(indexDuration == "hour") {
-			(calculateAbsoluteHourForMonth(ts, monthStart) | 100000).toString
+			calculateAbsoluteHourForMonth(ts, monthStart).toString
 		} else if(indexDuration == "minute") {
-			(calculateAbsoluteMinuteForMonth(ts, monthStart) | 100000).toString
+			calculateAbsoluteMinuteForMonth(ts, monthStart).toString
 		} else {
 			throw new Exception("Invalid Index Duration Value")	
 		}

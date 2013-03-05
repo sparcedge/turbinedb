@@ -1,16 +1,20 @@
 package com.sparcedge.turbine.util
 
-import java.util.{TreeMap,SortedMap}
+import java.util.{TreeMap,SortedMap,NavigableMap}
 import collection.JavaConversions._
 
 object WrappedTreeMap {
 	def apply[K,V](sortedMap: SortedMap[K,V]): WrappedTreeMap[K,V] = {
-		new WrappedTreeMap[K,V](sortedMap)
+		WrappedTreeMap[K,V](new TreeMap(sortedMap))
+	}
+
+	def apply[K,V](navigableMap: NavigableMap[K,V]): WrappedTreeMap[K,V] = {
+		new WrappedTreeMap[K,V](navigableMap)
 	}
 }
 
 // Revisit Generics
-class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
+class WrappedTreeMap[K,V](treeMap: NavigableMap[K,V] = new TreeMap[K,V]()) {
 
 	def get(key: K): Option[V] = {
 		if(treeMap.containsKey(key)) {
@@ -58,12 +62,20 @@ class WrappedTreeMap[K,V](treeMap: SortedMap[K,V] = new TreeMap[K,V]()) {
 		WrappedTreeMap(treeMap.headMap(key))
 	}
 
+	def headMap(key: K, incl: Boolean): WrappedTreeMap[K,V] = {
+		WrappedTreeMap(treeMap.headMap(key,incl))
+	}
+
 	def tailMap(key: K): WrappedTreeMap[K,V] = {
 		WrappedTreeMap(treeMap.tailMap(key))
 	}
 
-	def subMap(sKey: K, eKey: K): WrappedTreeMap[K,V] = {
-		WrappedTreeMap(treeMap.subMap(sKey, eKey))
+	def tailMap(key: K, incl: Boolean): WrappedTreeMap[K,V] = {
+		WrappedTreeMap(treeMap.tailMap(key,incl))
+	}
+
+	def subMap(sKey: K, sIncl: Boolean, eKey: K, eIncl: Boolean): WrappedTreeMap[K,V] = {
+		WrappedTreeMap(treeMap.subMap(sKey, sIncl, eKey, eIncl))
 	}
 
 	def size(): Int = {
