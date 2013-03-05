@@ -103,14 +103,15 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
 	private def sliceIndex(indexVal: Index, query: TurbineQuery): WrappedTreeMap[String,ReducedResult] = {
 		var sliced = indexVal.index
-		val lowerBoundBroken = query.start != None && query.start.get > indexVal.blade.periodStart.getMillis
+		val monthStart = indexVal.blade.periodStart.getMillis
+		val lowerBoundBroken = query.start != None && query.start.get > monthStart
 		var upperBoundBroken = query.end != None && query.end.get < indexVal.blade.periodEnd.getMillis
 
 		if(lowerBoundBroken) {
-			sliced = sliced.tailMap(query.startPlusMinute.get)
+			sliced = sliced.tailMap(DATA_GROUPING(query.start.get, monthStart))
 		}
 		if(upperBoundBroken) {
-			sliced = sliced.headMap(query.endMinute.get)
+			sliced = sliced.headMap(DATA_GROUPING(query.end.get, monthStart))
 		}
 
 		sliced
