@@ -41,17 +41,15 @@ trait TurbineHttpService extends HttpService { this: SprayActorLogging =>
 		pathPrefix("db" / PathElement) { database =>
 			pathPrefix(PathElement) { collection =>
 				path("") {
-					(get & parameter('q) ) { query =>
-						entity(as[String]) { rawQuery =>
-							respondWithMediaType(`application/json`) { ctx =>
-								TurbineQuery.tryParse(rawQuery) match {
-									case Success(query) =>
-										val queryPackage = TurbineQueryPackage(Collection(database, collection), query)
-										turbineManager ! QueryDispatchRequest(queryPackage, ctx)
-									case Failure(err) =>
-										log.error(err, "Failed parsing query from dispatch request")
-										ctx.complete(HttpResponse(StatusCodes.InternalServerError))
-								}
+					(get & parameter('q) ) { rawQuery =>
+						respondWithMediaType(`application/json`) { ctx =>
+							TurbineQuery.tryParse(rawQuery) match {
+								case Success(query) =>
+									val queryPackage = TurbineQueryPackage(Collection(database, collection), query)
+									turbineManager ! QueryDispatchRequest(queryPackage, ctx)
+								case Failure(err) =>
+									log.error(err, "Failed parsing query from dispatch request")
+									ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 							}
 						}
 					} ~
