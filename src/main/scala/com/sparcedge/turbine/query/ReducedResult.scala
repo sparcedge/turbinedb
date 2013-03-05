@@ -157,3 +157,44 @@ class CountReducedResult(val segment: String, var value: Double = 0.0, var count
 		}
 	}
 }
+
+class StandardDeviationReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
+	val reducer = "stddev"
+	var m = 0.0
+	var s = 0.0
+	var k = 1
+
+	def reduce(newVal: Double) {
+		var tmpM = m
+		m += (newVal - tmpM) / k
+		s += (newVal - tmpM) * (newVal - m)
+		k += 1
+		count += 1
+	}
+
+	// TODO: Encode Type Restrices in trait/inheritance hierarchy
+	// TODO: Bryan made reReduce algorithm so probably wrong
+	def reReduce(other: ReducedResult) {
+		if(other.isInstanceOf[StandardDeviationReducedResult]) {
+			val stDev = other.asInstanceOf[StandardDeviationReducedResult]
+			val tmpk = k + stDev.k
+			m = ((m*k)+(stDev.m*stDev.k)) / tmpk
+			s = ((s*k)+(stDev.s*stDev.k)) / tmpk
+			k = tmpk / 2
+		}
+	}
+
+	def copyForOutput(out: String): OutputResult = {
+		val stDevOut = new StandardDeviationReducedResult(segment, value, count) with OutputResult {
+			val output = out
+		}
+		stDevOut.m = m
+		stDevOut.s = s
+		stDevOut.k = k
+		stDevOut
+	}
+
+	override def getResultValue(): Double = {
+		Math.sqrt(s / (k-1))
+	}
+}

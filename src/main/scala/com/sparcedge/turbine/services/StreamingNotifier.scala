@@ -47,7 +47,7 @@ class StreamingNotifier extends Actor with SprayActorLogging {
 
 class EventListener(ctx: RequestContext, matches: Iterable[Match], collection: Collection) extends Actor with SprayActorLogging {
 
-	val responseStart = HttpResponse(entity = HttpBody(`application/json`, """{"connected":true}\n"""))
+	val responseStart = HttpResponse(entity = HttpBody(`application/json`, """{"connected":true}""" + "\n"))
 	ctx.responder ! ChunkedResponseStart(responseStart)
 
 	def receive = {

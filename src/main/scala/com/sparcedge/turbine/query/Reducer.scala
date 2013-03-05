@@ -40,6 +40,7 @@ case class CoreReducer (reducer: String, segment: String) {
 			case "avg" => new AvgReducedResult(segment)
 			case "sum" => new SumReducedResult(segment)
 			case "count" => new CountReducedResult(segment)
+			case "stdev" => new StandardDeviationReducedResult(segment)
 		}
 	}
 }
