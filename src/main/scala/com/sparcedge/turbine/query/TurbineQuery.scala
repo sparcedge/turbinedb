@@ -31,6 +31,13 @@ object TurbineQuery {
 			TurbineQuery(json.as[TurbineQueryParse])
 		}
 	}
+
+	def tryParseMatches(matchStr: String): Try[Iterable[Match]] = {
+		Try {
+			val json = Json.parse(matchStr)
+			json.as[List[JsObject]].map(Match(_))
+		}
+	}
 }
 
 case class TurbineQueryParse (
