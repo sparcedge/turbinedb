@@ -160,27 +160,27 @@ class CountReducedResult(val segment: String, var value: Double = 0.0, var count
 
 class StandardDeviationReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
 	val reducer = "stddev"
-	var m = 0.0
-	var s = 0.0
-	var k = 1
+	var diff = 0.0
+	var mean = 0.0
 
 	def reduce(newVal: Double) {
-		var tmpM = m
-		m += (newVal - tmpM) / k
-		s += (newVal - tmpM) * (newVal - m)
-		k += 1
 		count += 1
+		val delta = newVal - mean
+		mean = mean + (delta / count)
+		diff += delta * (newVal - mean)
 	}
 
-	// TODO: Encode Type Restrices in trait/inheritance hierarchy
-	// TODO: Bryan made reReduce algorithm so probably wrong
+	// TODO: Encode Type Restrictions in trait/inheritance hierarchy
+	// TODO: Bryan made better reReduce algorithm, but still probably wrong
 	def reReduce(other: ReducedResult) {
 		if(other.isInstanceOf[StandardDeviationReducedResult]) {
 			val stDev = other.asInstanceOf[StandardDeviationReducedResult]
-			val tmpk = k + stDev.k
-			m = ((m*k)+(stDev.m*stDev.k)) / tmpk
-			s = ((s*k)+(stDev.s*stDev.k)) / tmpk
-			k = tmpk / 2
+			val tmpCnt = count
+			val delta = mean - stDev.mean
+			val weight = (count * stDev.count) / (count + stDev.count)
+			diff += stDev.diff + (delta*delta*weight)
+			count += stDev.count
+			mean = ((mean*tmpCnt) + (stDev.mean*stDev.count)) / count
 		}
 	}
 
@@ -188,13 +188,12 @@ class StandardDeviationReducedResult(val segment: String, var value: Double = 0.
 		val stDevOut = new StandardDeviationReducedResult(segment, value, count) with OutputResult {
 			val output = out
 		}
-		stDevOut.m = m
-		stDevOut.s = s
-		stDevOut.k = k
+		stDevOut.diff = diff
+		stDevOut.mean = mean
 		stDevOut
 	}
 
 	override def getResultValue(): Double = {
-		Math.sqrt(s / (k-1))
+		Math.sqrt(diff / count)
 	}
 }
