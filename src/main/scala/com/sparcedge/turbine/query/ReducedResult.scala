@@ -159,7 +159,7 @@ class CountReducedResult(val segment: String, var value: Double = 0.0, var count
 }
 
 class StandardDeviationReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "stddev"
+	val reducer = "stdev"
 	var diff = 0.0
 	var mean = 0.0
 
