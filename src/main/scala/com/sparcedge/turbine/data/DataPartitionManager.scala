@@ -7,7 +7,8 @@ import scala.concurrent.{future,ExecutionContext}
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.query.{Match,Grouping}
 import com.sparcedge.turbine.ejournal.JournalReader
-import com.sparcedge.turbine.{BatchStorage,TurbineManager,Blade}
+import com.sparcedge.turbine.behaviors.BatchStorage
+import com.sparcedge.turbine.{TurbineManager,Blade}
 
 object DataPartitionManager {
 	case class WriteEvent(id: String, event: Event)

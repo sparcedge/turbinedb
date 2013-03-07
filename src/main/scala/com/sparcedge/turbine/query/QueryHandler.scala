@@ -130,9 +130,7 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
 	def combineAggregates(aggregates: Iterable[WrappedTreeMap[String,OutputResult]]): WrappedTreeMap[String,List[OutputResult]] = {
 		var combined = new WrappedTreeMap[String,List[OutputResult]]()
-		println(s"Aggregates Size: ${aggregates.size}")
 		aggregates foreach { aggregate =>
-			println(aggregate.size)
 			aggregate foreach { case (key,value) =>
 				val results = combined.getOrElseUpdate(key, List[OutputResult]())
 				val resOpt = results.find(r => r.segment == value.segment && r.reduceType == value.reduceType)

@@ -51,7 +51,7 @@ class DataPartition(val blade: Blade) {
 		val matches = indexes.head.indexKey.matches
 		val groupings = indexes.head.indexKey.groupings
 		val matchBuilder = new MatchBuilder(matches)
-		val groupStrBuilder = new GroupStringBuilder(DATA_GROUPING, groupings, blade)
+		val groupStrBuilder = new GroupStringBuilder(groupings, blade)
 		val indexUpdateBuilder = new IndexUpdateBuilder(indexes)
 		val segmentBuffers = createSegmentBuffers(segments.toList) 
 		val tsBuffer = new SegmentBuffer("ts", blade)
@@ -86,7 +86,8 @@ class DataPartition(val blade: Blade) {
 			readSegmentBasedOnType(segBuf, matchBuilder, grpStringBuilder, indexUpdateBuilder)
 		}
 
-		grpStringBuilder.applyTimestamp(timestamp)
+		indexUpdateBuilder("ts", timestamp)
+		grpStringBuilder("ts", timestamp)
 	}
 
 	def readSegmentBasedOnType(segmentBuffer: SegmentBuffer, matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
@@ -94,20 +95,20 @@ class DataPartition(val blade: Blade) {
 		val buffer = segmentBuffer.buffer
 		val byte = buffer.readByte
 		if(byte == 0) {
-			matchBuilder.applySegment(segment)
-			grpStringBuilder.applySegment(segment)
+			matchBuilder(segment)
+			grpStringBuilder(segment)
 		} else if(byte == 1) {
 			buffer.readBytes(lngArr,8)
 			val dbl = toDouble(lngArr)
-			matchBuilder.applySegment(segment, dbl)
-			grpStringBuilder.applySegment(segment, dbl)
-			indexUpdateBuilder.applySegment(segment, dbl)
+			matchBuilder(segment, dbl)
+			grpStringBuilder(segment, dbl)
+			indexUpdateBuilder(segment, dbl)
 		} else if(byte == 2) {
 			val len = buffer.readByte
 			val str = new String(buffer.getBytes(len))
-			matchBuilder.applySegment(segment, str)
-			grpStringBuilder.applySegment(segment, str)
-			indexUpdateBuilder.applySegment(segment,str)
+			matchBuilder(segment, str)
+			grpStringBuilder(segment, str)
+			indexUpdateBuilder(segment,str)
 		} else {
 			// Unrecognized Byte! - Probably bad!
 		}

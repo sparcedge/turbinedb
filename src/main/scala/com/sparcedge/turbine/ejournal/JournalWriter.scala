@@ -8,7 +8,7 @@ import Journal.WriteType
 import spray.routing.RequestContext
 
 import com.sparcedge.turbine.event.{EventPackage,EventIngressPackage}
-import com.sparcedge.turbine.BatchBehavior
+import com.sparcedge.turbine.behaviors.BatchBehavior
 
 object JournalWriter {
 	case class WriteEventToJournal(eventIngressPkg: EventIngressPackage, ctx: RequestContext)

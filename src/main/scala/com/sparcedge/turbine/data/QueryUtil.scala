@@ -41,13 +41,11 @@ object QueryUtil {
 		}
 	}
 
-	def createGroupString(dataGrpValue: String, grpValues: Array[String]): String = {
+	def createGroupString(dataGrpValue: String, grpValues: Iterable[String]): String = {
 		val builder = new StringBuilder
 		builder.append(dataGrpValue)
-		var cnt = 0
-		while(cnt < grpValues.length) {
-			builder.append(GROUP_SEPARATOR).append(grpValues(cnt))
-			cnt += 1
+		grpValues foreach { grpVal =>
+			builder.append(GROUP_SEPARATOR).append(grpVal)
 		}
 		builder.toString
 	}

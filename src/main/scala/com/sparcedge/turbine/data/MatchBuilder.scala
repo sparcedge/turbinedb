@@ -1,65 +1,16 @@
 package com.sparcedge.turbine.data
 
-import scala.collection.mutable
 import com.sparcedge.turbine.query.Match
+import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 
-class MatchBuilder(matches: Iterable[Match]) {
+class MatchBuilder(matches: Iterable[Match]) extends IncrementalBuildBehavior[Match,Boolean] {
+	val defaultValue: Boolean = false
+	init(matches map { mtch => (mtch.segment -> mtch) })
 
-	val matchArr = matches.toArray
-	val matchResults = new Array[Boolean](matchArr.length)
-	val matchIndexMap = toMutableMap(matches.map(_.segment).zipWithIndex)
-	
-	def applyTimestamp(ts: Long) {
-		val matchIndex = matchIndexMap.getOrElseUpdate("ts", -1)
+	def applyNone(idx: Int, mtch: Match): Boolean = false
+	def applyNumeric(idx: Int, mtch: Match, num: Double): Boolean = mtch(num)
+	def applyString(idx: Int, mtch: Match, str: String): Boolean = mtch(str)
+	def applyLong(idx: Int, mtch: Match, lng: Long): Boolean = mtch(lng)
 
-		if(matchIndex >= 0) {
-			val mtch = matchArr(matchIndex)
-			matchResults(matchIndex) = mtch(ts)
-		}
-	}
-
-	def applySegment(segment: String, value: String) {
-		val matchIndex = matchIndexMap.getOrElseUpdate(segment, -1)
-
-		if(matchIndex >= 0) {
-			val mtch = matchArr(matchIndex)
-			matchResults(matchIndex) = mtch(value)
-		}
-	}
-
-	def applySegment(segment: String, value: Double) {
-		val matchIndex = matchIndexMap.getOrElseUpdate(segment, -1)
-
-		if(matchIndex >= 0) {
-			val mtch = matchArr(matchIndex)
-			matchResults(matchIndex) = mtch(value)
-		}
-	}
-
-	def applySegment(segment: String) {
-		val matchIndex = matchIndexMap.getOrElseUpdate(segment, -1)
-
-		if(matchIndex >= 0) {
-			matchResults(matchIndex) = false
-		}
-	}
-
-	def satisfiesAllMatches(): Boolean = {
-		var cnt = 0
-		while(cnt < matchResults.length) {
-			if(!matchResults(cnt)) {
-				return false
-			}
-			cnt += 1
-		}
-		true
-	}
-
-	def toMutableMap(segIndexes: Iterable[(String,Int)]): mutable.Map[String,Int] = {
-		val dest = collection.mutable.Map[String,Int]()
-		segIndexes foreach { case (seg, idx) =>
-			dest(seg) = idx
-		}
-		dest
-	}
+	def satisfiesAllMatches(): Boolean = getValues().forall { v => v }
 }

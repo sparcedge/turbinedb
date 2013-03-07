@@ -1,4 +1,4 @@
-package com.sparcedge.turbine
+package com.sparcedge.turbine.behaviors
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global

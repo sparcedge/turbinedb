@@ -56,7 +56,7 @@ class BladeManagerRepository() extends Actor with ActorLogging { this: BladeMana
 
 	def discoverAndInitializeExistingBlades() {
 		val existingBlades = DiskUtil.retrieveBladesFromExistingData()
-		log.info("Initialized {} Blade Managers for Existing Data Partitions")
+		log.info("Initialized {} Blade Managers for Existing Data Partitions", existingBlades.size)
 		initializeBlades(existingBlades)
 	}
 

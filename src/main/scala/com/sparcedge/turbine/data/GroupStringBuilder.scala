@@ -1,58 +1,23 @@
 package com.sparcedge.turbine.data
 
-import scala.collection.mutable
-
 import com.sparcedge.turbine.query.Grouping
 import com.sparcedge.turbine.Blade
+import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 import QueryUtil._
 
-class GroupStringBuilder(dataGrouping: Grouping, groupings: Iterable[Grouping], blade: Blade) {
-
-	val grpArr = groupings.toArray
-	val grpValues = new Array[String](grpArr.length)
-	val grpIndexMap = toMutableMap(groupings.map(_.segment).zipWithIndex)
+class GroupStringBuilder(groupings: Iterable[Grouping], blade: Blade) extends IncrementalBuildBehavior[Grouping,String] {
 	var dataGrpValue = ""
+	val defaultValue: String = "nil"
+	init(groupings map { grouping => (grouping.segment -> grouping) })
 
-	def applyTimestamp(ts: Long) {
-		val grpIndex = grpIndexMap.getOrElseUpdate("ts", -1)
-		dataGrpValue = dataGrouping(ts, blade.periodStartMS)
+	def applyNone(idx: Int, grouping: Grouping): String = "nil"
+	def applyNumeric(idx: Int, grouping: Grouping, num: Double): String = grouping(num)
+	def applyString(idx: Int, grouping: Grouping, str: String): String = grouping(str)
 
-		if(grpIndex >= 0) {
-			val grp = grpArr(grpIndex)
-			grpValues(grpIndex) = grp(ts)
-		}
-	}
+	def applyLong(idx: Int, grouping: Grouping, lng: Long): String = {
+		dataGrpValue = DATA_GROUPING(lng, blade.periodStartMS)
+		grouping(lng)
+	} 
 
-	def applySegment(segment: String, value: String) {
-		val grpIndex = grpIndexMap.getOrElseUpdate(segment, -1)
-		if(grpIndex >= 0) {
-			grpValues(grpIndex) = value
-		}
-	}
-
-	def applySegment(segment: String, value: Double) {
-		val grpIndex = grpIndexMap.getOrElseUpdate(segment, -1)
-		if(grpIndex >= 0) {
-			grpValues(grpIndex) = value.toString
-		}
-	}
-
-	def applySegment(segment: String) {
-		val grpIndex = grpIndexMap.getOrElseUpdate(segment, -1)
-		if(grpIndex >= 0) {
-			grpValues(grpIndex) = "nil"
-		}
-	}
-
-	def buildGroupString(): String = {
-		createGroupString(dataGrpValue, grpValues)
-	}
-
-	def toMutableMap(segIndexes: Iterable[(String,Int)]): mutable.Map[String,Int] = {
-		val dest = collection.mutable.Map[String,Int]()
-		segIndexes foreach { case (seg, idx) =>
-			dest(seg) = idx
-		}
-		dest
-	}
+	def buildGroupString(): String = createGroupString(dataGrpValue, getValues)
 }
