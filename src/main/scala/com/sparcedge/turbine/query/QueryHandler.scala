@@ -38,7 +38,7 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		case HandleQuery(queryPackage, ctx) =>
 			val query = queryPackage.query
 
-			val outMap = query.reducers.map(r => ((r.segment, r.reducer) -> r.propertyName)).toMap
+			val outMap = query.reducers.map(r => (r.reducer -> r.outputProperty)).toMap
 
 			// In the future!!!
 			val bladeManagers = requestBladeManagers(queryPackage)
@@ -84,17 +84,14 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		indexResponses.map(responses => responses.map(res => res.index))
 	}
 
-	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery, outMap: Map[(String,String),String]): Future[WrappedTreeMap[String,List[OutputResult]]] = {
+	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery, outMap: Map[Reducer,String]): Future[WrappedTreeMap[String,List[OutputResult]]] = {
 		val sliced = indexes.map(idxs => idxs.map(idx => (idx -> sliceIndex(idx, query))))
 		val flattened = sliced.map(idxs => idxs.map { case (idx, agg) => removeHourGroupFlattendAndReduceAggregate(agg, retrieveOutputParameter(idx, outMap)) })
 		flattened.map(combineAggregates(_))
 	}
 
-	def retrieveOutputParameter(index: Index, outMap: Map[(String,String),String]): String = {
-		val reducer = index.indexKey.reducer
-		val segment = reducer.segment
-		val reducerType = reducer.reducer
-		outMap((segment,reducerType))
+	def retrieveOutputParameter(index: Index, outMap: Map[Reducer,String]): String = {
+		outMap(index.indexKey.reducer)
 	}
 
 	def convertCombinedIndexToJson(combined: Future[WrappedTreeMap[String,List[OutputResult]]]): Future[String] = {
@@ -133,10 +130,12 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
 	def combineAggregates(aggregates: Iterable[WrappedTreeMap[String,OutputResult]]): WrappedTreeMap[String,List[OutputResult]] = {
 		var combined = new WrappedTreeMap[String,List[OutputResult]]()
+		println(s"Aggregates Size: ${aggregates.size}")
 		aggregates foreach { aggregate =>
+			println(aggregate.size)
 			aggregate foreach { case (key,value) =>
 				val results = combined.getOrElseUpdate(key, List[OutputResult]())
-				val resOpt = results.find(r => r.segment == value.segment && r.reducer == value.reducer)
+				val resOpt = results.find(r => r.segment == value.segment && r.reduceType == value.reduceType)
 				if(resOpt.isDefined) {
 					resOpt.get.reReduce(value)
 				} else {

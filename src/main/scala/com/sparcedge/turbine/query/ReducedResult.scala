@@ -6,7 +6,7 @@ abstract class ReducedResult {
 	val segment: String
 	var value: Double
 	var count: Int
-	val reducer: String
+	val reduceType: String
 
 	def apply(event: Event) {
 		val dblOpt = event.getDouble(segment)
@@ -42,7 +42,7 @@ trait OutputResult extends ReducedResult {
 }
 
 class MaxReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "max"
+	val reduceType = "max"
 
 	def reduce(newVal: Double) {
 		if(newVal > value) {
@@ -66,7 +66,7 @@ class MaxReducedResult(val segment: String, var value: Double = 0.0, var count: 
 }
 
 class MinReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "min"
+	val reduceType = "min"
 
 	def reduce(newVal: Double) {
 		if(newVal < value) {
@@ -90,7 +90,7 @@ class MinReducedResult(val segment: String, var value: Double = 0.0, var count: 
 }
 
 class AvgReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "avg"
+	val reduceType = "avg"
 
 	def reduce(newVal: Double) {
 		value += newVal
@@ -114,7 +114,7 @@ class AvgReducedResult(val segment: String, var value: Double = 0.0, var count: 
 }
 
 class SumReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "sum"
+	val reduceType = "sum"
 
 	def reduce(newVal: Double) {
 		value += newVal
@@ -134,7 +134,7 @@ class SumReducedResult(val segment: String, var value: Double = 0.0, var count: 
 }
 
 class CountReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "count"
+	val reduceType = "count"
 
 	def reduce(newVal: Double) {
 		value += 1
@@ -158,8 +158,8 @@ class CountReducedResult(val segment: String, var value: Double = 0.0, var count
 	}
 }
 
-class StandardDeviationReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
-	val reducer = "stdev"
+class StDevReducedResult(val segment: String, var value: Double = 0.0, var count: Int = 0) extends ReducedResult {
+	val reduceType = "stdev"
 	var diff = 0.0
 	var mean = 0.0
 
@@ -171,10 +171,9 @@ class StandardDeviationReducedResult(val segment: String, var value: Double = 0.
 	}
 
 	// TODO: Encode Type Restrictions in trait/inheritance hierarchy
-	// TODO: Bryan made better reReduce algorithm, but still probably wrong
 	def reReduce(other: ReducedResult) {
-		if(other.isInstanceOf[StandardDeviationReducedResult]) {
-			val stDev = other.asInstanceOf[StandardDeviationReducedResult]
+		if(other.isInstanceOf[StDevReducedResult]) {
+			val stDev = other.asInstanceOf[StDevReducedResult]
 			val tmpCnt = count
 			val delta = mean - stDev.mean
 			val weight = (count * stDev.count).toDouble / (count + stDev.count)
@@ -185,7 +184,7 @@ class StandardDeviationReducedResult(val segment: String, var value: Double = 0.
 	}
 
 	def copyForOutput(out: String): OutputResult = {
-		val stDevOut = new StandardDeviationReducedResult(segment, value, count) with OutputResult {
+		val stDevOut = new StDevReducedResult(segment, value, count) with OutputResult {
 			val output = out
 		}
 		stDevOut.diff = diff

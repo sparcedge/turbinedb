@@ -11,7 +11,7 @@ class IndexUpdateBuilder(indexes: Iterable[Index]) {
 
 	def applySegment(segment: String, value: String) {
 		val idxIndex = idxIndexMap.getOrElseUpdate(segment, -1)
-		if(idxIndex >= 0 && idxArr(idxIndex).indexKey.reducer.reducer == "count") {
+		if(idxIndex >= 0 && idxArr(idxIndex).indexKey.reducer.reduceType == "count") {
 			idxUpdateInds(idxIndex) = true
 			idxValues(idxIndex) = 1.0
 		}

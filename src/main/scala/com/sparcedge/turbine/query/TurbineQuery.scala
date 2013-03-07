@@ -21,7 +21,7 @@ object TurbineQuery {
 		val end = parseQuery.end
 		val matches = parseQuery.`match` map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (List[Match]())
 		val groupings = parseQuery.group map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (List[Grouping]())
-		val reducers = parseQuery.reduce.map(Reducer(_))
+		val reducers = parseQuery.reduce.map(ReducerPackage(_))
 		new TurbineQuery(start, end, matches, groupings, reducers)
 	}
 
@@ -53,13 +53,10 @@ class TurbineQuery (
 	val end: Option[Long] = None,
 	val matches: List[Match] = List[Match](),
 	val groupings: List[Grouping] = List[Grouping](),
-	val reducers: List[Reducer] = List[Reducer]()
+	val reducers: List[ReducerPackage] = List[ReducerPackage]()
 ) {
-	val minuteFormatter = DateTimeFormat.forPattern("yyyy-MM-dd-HH-mm")
-	val startPlusMinute = start map { s => minuteFormatter.print(new DateTime(s).plusMinutes(1)) }
-	val endMinute = end map { e => minuteFormatter.print(new DateTime(e)) }
 
 	def createAggregateIndexKey(reducer: Reducer): IndexKey = {
-		IndexKey(reducer.getCoreReducer(), matches, groupings)
+		IndexKey(reducer, matches, groupings)
 	}
 }

@@ -46,7 +46,7 @@ class BladeManager(blade: Blade) extends Actor with ActorLogging { this: BladeMa
 	}
 
 	def retrieveIndexKeysFromQuery(query: TurbineQuery): Iterable[IndexKey] = {
-		query.reducers.map(query.createAggregateIndexKey(_))
+		query.reducers map { reducerPkg => query.createAggregateIndexKey(reducerPkg.reducer) }
 	}
 
 	def createAggregateIndex(key: IndexKey, newIndexes: mutable.ListBuffer[Index]): ActorRef = {
@@ -62,10 +62,10 @@ class BladeManager(blade: Blade) extends Actor with ActorLogging { this: BladeMa
 	}
 }
 
-case class IndexKey (reducer: CoreReducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
+case class IndexKey (reducer: Reducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
 	val uniqueMatchStr = matches.map(_.uniqueId).toList.sorted.mkString(".")
 	val uniqueGroupStr = groupings.map(_.uniqueId).toList.mkString(".")
-	val id = s"${reducer.reducer}.${reducer.segment}.${uniqueMatchStr}.${uniqueGroupStr}"
+	val id = s"${reducer.reduceType}.${reducer.segment}.${uniqueMatchStr}.${uniqueGroupStr}"
 }
 
 trait BladeManagerProvider {

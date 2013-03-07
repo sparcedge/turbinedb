@@ -93,4 +93,4 @@ trait TurbineHttpService extends HttpService { this: SprayActorLogging =>
 	def respondAsEventStream = 
 		respondWithHeader(`Cache-Control`(`no-cache`)) &
 		respondWithHeader(`Connection`("Keep-Alive"))
-} 
+}
