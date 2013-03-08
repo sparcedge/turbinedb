@@ -86,7 +86,6 @@ class DataPartition(val blade: Blade) {
 			readSegmentBasedOnType(segBuf, matchBuilder, grpStringBuilder, indexUpdateBuilder)
 		}
 
-		indexUpdateBuilder("ts", timestamp)
 		grpStringBuilder("ts", timestamp)
 	}
 

@@ -15,9 +15,15 @@ class GroupStringBuilder(groupings: Iterable[Grouping], blade: Blade) extends In
 	def applyString(idx: Int, grouping: Grouping, str: String): String = grouping(str)
 
 	def applyLong(idx: Int, grouping: Grouping, lng: Long): String = {
-		dataGrpValue = DATA_GROUPING(lng, blade.periodStartMS)
 		grouping(lng)
-	} 
+	}
 
-	def buildGroupString(): String = createGroupString(dataGrpValue, getValues)
+	override def apply(key: String, lng: Long) {
+		dataGrpValue = DATA_GROUPING(lng, blade.periodStartMS)
+		super.apply(key,lng)
+	}
+
+	def buildGroupString(): String = {
+		createGroupString(dataGrpValue, getValues)
+	}
 }
