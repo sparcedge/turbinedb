@@ -61,13 +61,10 @@ object HttpResponder {
 }
 
 class HttpResponder extends Actor {
-	val timer = new com.sparcedge.turbine.util.Timer
 	def receive = {
 		case Respond(ctx, resp) =>
 			ctx.complete(resp)
 		case RespondMultiple(ctxs, resp) =>
-			timer.start
 			ctxs.foreach(_.complete(resp))
-			timer.stop("Completed Contexts")
 	}
 }

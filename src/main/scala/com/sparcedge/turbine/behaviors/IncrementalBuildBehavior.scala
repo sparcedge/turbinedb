@@ -6,7 +6,7 @@ import scala.collection.mutable
 // TODO: Only pass indexes to implementers that want it
 trait IncrementalBuildBehavior[T,O] {
 	def defaultValue: O
-	val idxMap = new HashMap[String,List[Int]]()
+	val idxMap = new HashMap[String,mutable.ArrayBuffer[Int]]()
 	var elements = mutable.ArrayBuffer[T]()
 	var values = mutable.ArrayBuffer[O]()
 
@@ -15,9 +15,10 @@ trait IncrementalBuildBehavior[T,O] {
 		pairs foreach { case (key, elem) =>
 			var idxs = idxMap.get(key)
 			if(idxs == null) {
-				idxs = List[Int]()	
+				idxs = mutable.ArrayBuffer[Int]()
+				idxMap.put(key, idxs)
 			}
-			idxMap.put(key, cnt :: idxs)
+			idxs += cnt
 			elements += elem
 			values += defaultValue
 			cnt += 1
@@ -27,8 +28,11 @@ trait IncrementalBuildBehavior[T,O] {
 	def apply(key: String) {
 		val idxs = idxMap.get(key)
 		if(idxs != null) {
-			idxs.foreach { idx =>
+			var cnt = 0
+			while (cnt < idxs.length) {
+				val idx = idxs(cnt)
 				values(idx) = applyNone(idx, elements(idx))
+				cnt += 1
 			}
 		}
 	}
@@ -36,8 +40,11 @@ trait IncrementalBuildBehavior[T,O] {
 	def apply(key: String, lng: Long) {
 		val idxs = idxMap.get(key)
 		if(idxs != null) {
-			idxs.foreach { idx =>
+			var cnt = 0
+			while (cnt < idxs.length) {
+				val idx = idxs(cnt)
 				values(idx) = applyLong(idx, elements(idx), lng)
+				cnt += 1
 			}
 		}
 	}
@@ -45,8 +52,11 @@ trait IncrementalBuildBehavior[T,O] {
 	def apply(key: String, num: Double) {
 		val idxs = idxMap.get(key)
 		if(idxs != null) {
-			idxs.foreach { idx =>
+			var cnt = 0
+			while (cnt < idxs.length) {
+				val idx = idxs(cnt)
 				values(idx) = applyNumeric(idx, elements(idx), num)
+				cnt += 1
 			}
 		}
 	} 
@@ -54,8 +64,11 @@ trait IncrementalBuildBehavior[T,O] {
 	def apply(key: String, str: String) {
 		val idxs = idxMap.get(key)
 		if(idxs != null) {
-			idxs.foreach { idx =>
+			var cnt = 0
+			while (cnt < idxs.length) {
+				val idx = idxs(cnt)
 				values(idx) = applyString(idx, elements(idx), str)
+				cnt += 1
 			}
 		}
 	}

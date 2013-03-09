@@ -4,8 +4,8 @@ import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 
 // TODO: Be able to handle non numeric reduce cases
 class IndexUpdateBuilder(indexes: Iterable[Index]) extends IncrementalBuildBehavior[Index,Double] {
+	val defaultValue: Double = 0.0	
 	init(indexes map { index => (index.indexKey.reducer.segment -> index) })
-	val defaultValue: Double = 0.0
 	val updateInds = new Array[Boolean](getValues().size)
 
 	def applyNone(idx: Int, index: Index): Double = 0.0
@@ -32,9 +32,10 @@ class IndexUpdateBuilder(indexes: Iterable[Index]) extends IncrementalBuildBehav
 
 	def executeUpdates(grpStr: String) {
 		var cnt = 0
-		getValues() foreach { value =>
+		val values = getValues()
+		while (cnt < values.length) {
 			if(updateInds(cnt)) {
-				elements(cnt).updateUnchecked(value, grpStr)
+				elements(cnt).updateUnchecked(values(cnt), grpStr)
 			}
 			cnt += 1
 		}

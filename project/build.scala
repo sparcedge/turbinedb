@@ -57,7 +57,8 @@ object TurbineDB extends Build {
 		base = file("."),
 		settings = buildSettings ++ SbtOneJar.oneJarSettings ++ Seq (
 			resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo),
-			libraryDependencies ++= Dependencies.allDependencies
+			libraryDependencies ++= Dependencies.allDependencies,
+			crossTarget := new File("/Users/bgilbert/projects/personal/turbine-db/build")
 		)
 	)
 }
