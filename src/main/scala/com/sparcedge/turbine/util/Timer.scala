@@ -11,6 +11,8 @@ class Timer {
 		sTime = System.currentTimeMillis
 	}
 
+	def diff: Long = System.currentTimeMillis - sTime
+
 	def stop(msg: String) {
 		stop(msg, 0)
 	}
