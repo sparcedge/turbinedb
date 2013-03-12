@@ -69,7 +69,7 @@ class MinReducedResult(val segment: String, var value: Double = 0.0, var count: 
 	val reduceType = "min"
 
 	def reduce(newVal: Double) {
-		if(newVal < value) {
+		if(newVal < value || count == 0) {
 			value = newVal
 		}
 		count += 1
@@ -193,6 +193,6 @@ class StDevReducedResult(val segment: String, var value: Double = 0.0, var count
 	}
 
 	override def getResultValue(): Double = {
-		Math.sqrt(diff / count)
+		if(count > 0) Math.sqrt(diff / count) else 0
 	}
 }
