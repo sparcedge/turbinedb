@@ -12,7 +12,7 @@ object Grouping {
 	def apply(jsObj: JsObject): Grouping = {
 		retrieveGroupingValue(jsObj) match {
 			case Some(("segment", JsString(seg))) => new SegmentGrouping(seg)
-			case Some(("duration", JsString(dur))) => new DurationGrouping(dur, retrieveOffset(jsObj))
+			case Some(("duration", JsString(dur))) => DurationGrouping(dur, retrieveOffset(jsObj))
 			case _ => throw new Exception("Invalid Grouping")
 		}
 	}
@@ -46,9 +46,23 @@ class SegmentGrouping(val segment: String) extends Grouping {
 	val uniqueId: String = s"SegmentGrouping.${segment}"
 }
 
-class DurationGrouping(val duration: String, offsetOpt: Option[Int]) extends Grouping {
+object DurationGrouping {
+	def apply(duration: String, offsetOpt: Option[Int]): DurationGrouping = {
+		duration match {
+			case "year" => new YearDurationGrouping(offsetOpt)
+			case "month" => new MonthDurationGrouping(offsetOpt)
+			case "day" => new DayDurationGrouping(offsetOpt)
+			case "hour" => new HourDurationGrouping(offsetOpt)
+			case "minute" => new MinuteDurationGrouping(offsetOpt)
+			case _ => throw new Exception("Invalid Duration Value")
+		}
+	}
+}
+
+trait DurationGrouping extends Grouping {
+	val duration: String
 	val segment = "ts"
-	val offset = offsetOpt.getOrElse(0)
+	val offset: Int
 
 	override def apply(event: Event): String = {
 		apply(event.ts)
@@ -56,18 +70,47 @@ class DurationGrouping(val duration: String, offsetOpt: Option[Int]) extends Gro
 
 	override def apply(ts: Long): String = {
 		val tsOffset = applyGmtOffset(ts, offset)
-		val durGroup = duration match {
-			case "year" => calculateYearCombined(tsOffset)
-			case "month" => calculateMonthCombined(tsOffset)
-			case "day" => calculateDayCombined(tsOffset)
-			case "hour" => calculateHourCombined(tsOffset)
-			case "minute" => calculateMinuteCombined(tsOffset)
-			case _ => throw new Exception("Invalid Duration Value")
-		}
-		durGroup.toString
+		calculateDurationValue(tsOffset).toString
 	}
 
+	def calculateDurationValue(ts: Long): Long
+
 	val uniqueId: String = s"DurationGrouping.${duration}.${offset}"
+}
+
+class YearDurationGrouping(offsetOpt: Option[Int]) extends DurationGrouping {
+	val duration = "year"
+	val offset = offsetOpt.getOrElse(0)
+
+	def calculateDurationValue(ts: Long): Long = calculateYearCombined(ts)
+}
+
+class MonthDurationGrouping(offsetOpt: Option[Int]) extends DurationGrouping {
+	val duration = "month"
+	val offset = offsetOpt.getOrElse(0)
+
+	def calculateDurationValue(ts: Long): Long = calculateMonthCombined(ts)
+}
+
+class DayDurationGrouping(offsetOpt: Option[Int]) extends DurationGrouping {
+	val duration = "day"
+	val offset = offsetOpt.getOrElse(0)
+
+	def calculateDurationValue(ts: Long): Long = calculateDayCombined(ts)
+}
+
+class HourDurationGrouping(offsetOpt: Option[Int]) extends DurationGrouping {
+	val duration = "hour"
+	val offset = offsetOpt.getOrElse(0)
+
+	def calculateDurationValue(ts: Long): Long = calculateHourCombined(ts)
+}
+
+class MinuteDurationGrouping(offsetOpt: Option[Int]) extends DurationGrouping {
+	val duration = "minute"
+	val offset = offsetOpt.getOrElse(0)
+
+	def calculateDurationValue(ts: Long): Long = calculateMinuteCombined(ts)
 }
 
 class IndexGrouping(val indexDuration: String) extends Grouping {
