@@ -4,7 +4,7 @@ import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
 import akka.util.Timeout
 import akka.pattern.ask
-import scala.concurrent.{ExecutionContext,Await,Future}
+import scala.concurrent.{ExecutionContext,Await,Future,future}
 import scala.concurrent.duration._
 import scala.util.{Try,Success,Failure}
 import scala.collection.mutable
@@ -41,11 +41,13 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 			val outMap = query.reducers.map(r => (r.reducer -> r.outputProperty)).toMap
 
 			// In the future!!!
-			val bladeManagers = requestBladeManagers(queryPackage)
-			val indexActors = requestIndexActors(bladeManagers, query)
-			val indexes = retrieveIndexesFromActors(indexActors)
-			val combinedIndex = sliceFlattenAndCombineIndexes(indexes, query, outMap)
-			val jsonResult = convertCombinedIndexToJson(combinedIndex)
+			val jsonResult = for (
+				bladeManagers <- getBladeManagers(queryPackage);
+				indexManagers <- getIndexManagers(bladeManagers, query);
+				indexes <- getIndexes(indexManagers);
+				combinedIndex <- future { sliceFlattenAndCombineIndexes(indexes, query, outMap) };
+				json <- future { convertCombinedIndexToJson(combinedIndex) }
+			) yield json
 
 			jsonResult.onComplete {
 				case Success(json) => 
@@ -57,7 +59,7 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		case _ =>
 	}
 
-	def requestBladeManagers(queryPackage: TurbineQueryPackage): Future[Iterable[ActorRef]] = {
+	def getBladeManagers(queryPackage: TurbineQueryPackage): Future[Iterable[ActorRef]] = {
 		val query = queryPackage.query
 		val sPeriodOpt = query.start.map(monthFmt.print)
 		val ePeriodOpt = query.end.map(monthFmt.print)
@@ -66,36 +68,32 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		(bladeManagerRepository ? req).mapTo[BladeManagerRangeResponse].map(_.managers.map(_._2))
 	}
 
-	def requestIndexActors(bladeManagers: Future[Iterable[ActorRef]], query: TurbineQuery): Future[Iterable[ActorRef]] = {
-		val indexActorResponses: Future[Iterable[IndexesResponse]] = bladeManagers flatMap { managers =>
-			Future.sequence (
-				managers.map(manager => (manager ? IndexesRequest(query)).mapTo[IndexesResponse])
-			)
-		}
-		indexActorResponses.map(responses => responses.flatMap(_.indexes))
+	def getIndexManagers(bladeManagers: Iterable[ActorRef], query: TurbineQuery): Future[Iterable[ActorRef]] = {
+		val indexManagerResponses = Future.sequence (
+			bladeManagers map { manager => (manager ? IndexesRequest(query)).mapTo[IndexesResponse] }
+		)
+		indexManagerResponses.map(responses => responses.flatMap(_.indexes))
 	}
 
-	def retrieveIndexesFromActors(indexActors: Future[Iterable[ActorRef]]): Future[Iterable[Index]] = {
-		val indexResponses: Future[Iterable[IndexResponse]] = indexActors flatMap { actors => 
-				Future.sequence ( 
-					actors.map(actor => (actor ? IndexRequest()).mapTo[IndexResponse])
-				)
-			}
+	def getIndexes(indexManagers: Iterable[ActorRef]): Future[Iterable[Index]] = {
+		val indexResponses = Future.sequence (
+			indexManagers map { manager => (manager ? IndexRequest()).mapTo[IndexResponse] }
+		)
 		indexResponses.map(responses => responses.map(res => res.index))
 	}
 
-	def sliceFlattenAndCombineIndexes(indexes: Future[Iterable[Index]], query: TurbineQuery, outMap: Map[Reducer,String]): Future[WrappedTreeMap[String,List[OutputResult]]] = {
-		val sliced = indexes.map(idxs => idxs.map(idx => (idx -> sliceIndex(idx, query))))
-		val flattened = sliced.map(idxs => idxs.map { case (idx, agg) => removeHourGroupFlattendAndReduceAggregate(agg, retrieveOutputParameter(idx, outMap)) })
-		flattened.map(combineAggregates(_))
+	def sliceFlattenAndCombineIndexes(indexes: Iterable[Index], query: TurbineQuery, outMap: Map[Reducer,String]): WrappedTreeMap[String,List[OutputResult]] = {
+		val sliced = indexes.map(idx => (idx -> sliceIndex(idx, query)))
+		val flattened = sliced map { case (idx, agg) => removeHourGroupFlattendAndReduceAggregate(agg, retrieveOutputParameter(idx, outMap)) }
+		combineAggregates(flattened)
 	}
 
 	def retrieveOutputParameter(index: Index, outMap: Map[Reducer,String]): String = {
 		outMap(index.indexKey.reducer)
 	}
 
-	def convertCombinedIndexToJson(combined: Future[WrappedTreeMap[String,List[OutputResult]]]): Future[String] = {
-		combined.map(CustomJsonSerializer.serializeAggregateGroupMap(_))
+	def convertCombinedIndexToJson(combined: WrappedTreeMap[String,List[OutputResult]]): String = {
+		CustomJsonSerializer.serializeAggregateGroupMap(combined)
 	}
 
 	private def sliceIndex(indexVal: Index, query: TurbineQuery): WrappedTreeMap[String,ReducedResult] = {
