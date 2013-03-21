@@ -9,7 +9,8 @@ import QueryUtil._
 
 class GroupStringBuilder(groupings: Iterable[Grouping], blade: Blade) extends IncrementalBuildBehavior[Grouping,String] {
 	var dataGrpValue = ""
-	val defaultValue: String = "nil"	
+	val defaultValue: String = "nil"
+	var values: Array[String] = new Array[String](0)
 	init(groupings map { grouping => (grouping.segment -> grouping) })
 
 	def makeValArray(values: ArrayBuffer[String]): Array[String] = values.toArray

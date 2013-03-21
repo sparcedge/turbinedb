@@ -7,6 +7,7 @@ import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 
 class MatchBuilder(matches: Iterable[Match]) extends IncrementalBuildBehavior[Match,Boolean] {
 	val defaultValue: Boolean = false
+	var values: Array[Boolean] = new Array[Boolean](0)
 	init(matches map { mtch => (mtch.segment -> mtch) })
 
 	def makeValArray(values: ArrayBuffer[Boolean]): Array[Boolean] = values.toArray

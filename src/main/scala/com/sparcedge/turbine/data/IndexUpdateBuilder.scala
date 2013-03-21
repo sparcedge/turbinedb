@@ -7,6 +7,7 @@ import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 // TODO: Be able to handle non numeric reduce cases
 class IndexUpdateBuilder(indexes: Iterable[Index]) extends IncrementalBuildBehavior[Index,Double] {
 	val defaultValue: Double = 0.0	
+	var values: Array[Double] = new Array[Double](0)
 	init(indexes map { index => (index.indexKey.reducer.segment -> index) })
 	val updateInds = new Array[Boolean](getValues().size)
 

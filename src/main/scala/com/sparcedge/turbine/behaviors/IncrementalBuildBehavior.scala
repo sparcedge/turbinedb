@@ -4,11 +4,11 @@ import java.util.HashMap
 import scala.collection.mutable.ArrayBuffer
 
 // Warning Performance Critical Path (Here be dargons)
-trait IncrementalBuildBehavior[T, /*@specialized(Double)*/ O] {
+trait IncrementalBuildBehavior[T, @specialized(Double) O] {
 	def defaultValue: O
 	val idxMap = new HashMap[String,Array[Int]]()
 	var elements: Array[T] = null
-	var values: Array[O] = null
+	var values: Array[O]
 
 	def init(pairs: Iterable[(String,T)]) {
 		var cnt = 0
