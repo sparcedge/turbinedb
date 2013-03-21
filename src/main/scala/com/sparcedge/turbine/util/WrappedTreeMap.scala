@@ -24,6 +24,10 @@ class WrappedTreeMap[K,V](treeMap: NavigableMap[K,V] = new TreeMap[K,V]()) {
 		}
 	}
 
+	def getUnsafe(key: K): V = {
+		treeMap.get(key)
+	}
+
 	def apply(key: K): V = {
 		treeMap.get(key)
 	}

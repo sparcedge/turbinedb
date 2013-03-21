@@ -1,5 +1,7 @@
 package com.sparcedge.turbine.data
 
+import scala.collection.mutable.ArrayBuffer
+
 import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 
 // TODO: Be able to handle non numeric reduce cases
@@ -7,6 +9,17 @@ class IndexUpdateBuilder(indexes: Iterable[Index]) extends IncrementalBuildBehav
 	val defaultValue: Double = 0.0	
 	init(indexes map { index => (index.indexKey.reducer.segment -> index) })
 	val updateInds = new Array[Boolean](getValues().size)
+
+	def makeValArray(values: ArrayBuffer[Double]): Array[Double] = {
+		val arr = new Array[Double](values.length)
+		var cnt = 0
+		while(cnt < values.length) {
+			arr(cnt) = values(cnt)
+			cnt += 1
+		}
+		arr
+	}
+	def makeElementArray(elements: ArrayBuffer[Index]): Array[Index] = elements.toArray
 
 	def applyNone(idx: Int, index: Index): Double = 0.0
 	def applyNumeric(idx: Int, index: Index, num: Double): Double = {

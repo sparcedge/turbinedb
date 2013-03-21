@@ -1,5 +1,7 @@
 package com.sparcedge.turbine.data
 
+import scala.collection.mutable.ArrayBuffer
+
 import com.sparcedge.turbine.query.Grouping
 import com.sparcedge.turbine.Blade
 import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
@@ -9,6 +11,9 @@ class GroupStringBuilder(groupings: Iterable[Grouping], blade: Blade) extends In
 	var dataGrpValue = ""
 	val defaultValue: String = "nil"	
 	init(groupings map { grouping => (grouping.segment -> grouping) })
+
+	def makeValArray(values: ArrayBuffer[String]): Array[String] = values.toArray
+	def makeElementArray(elements: ArrayBuffer[Grouping]): Array[Grouping] = elements.toArray
 
 	def applyNone(idx: Int, grouping: Grouping): String = "nil"
 	def applyNumeric(idx: Int, grouping: Grouping, num: Double): String = grouping(num)

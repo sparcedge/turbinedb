@@ -64,27 +64,36 @@ class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade
 
 	def updateUnchecked(event: Event) {
 		val grpStr = createDataGroupString(event, blade, groupings)
-		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		val reducer = getOrUpdate(grpStr)
 		reducer(event)
 	}
 
 	def updateUnchecked(event: Event, grpStr: String) {
-		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		val reducer = getOrUpdate(grpStr)
 		reducer(event)	
 	}
 
 	def updateUnchecked(value: Double, grpStr: String) {
-		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		val reducer = getOrUpdate(grpStr)
 		reducer(value)	
 	}
 
 	def updateUnchecked(value: String, grpStr: String) {
-		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		val reducer = getOrUpdate(grpStr)
 		reducer(value)	
 	}
 
 	def updateUnchecked(value: Long, grpStr: String) {
-		val reducer = index.getOrElseUpdate(grpStr, indexKey.reducer.createReducedResult)
+		val reducer = getOrUpdate(grpStr)
 		reducer(value)	
+	}
+
+	def getOrUpdate(key: String): ReducedResult = {
+		var reducedResult = index.getUnsafe(key)
+		if(reducedResult == null) {
+			reducedResult = indexKey.reducer.createReducedResult
+			index.update(key, reducedResult)
+		}
+		reducedResult
 	}
 }

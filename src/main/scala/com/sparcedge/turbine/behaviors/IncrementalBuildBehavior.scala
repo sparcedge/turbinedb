@@ -1,28 +1,32 @@
 package com.sparcedge.turbine.behaviors
 
 import java.util.HashMap
-import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
 
-// TODO: Only pass indexes to implementers that want it
-trait IncrementalBuildBehavior[T,O] {
+// Warning Performance Critical Path (Here be dargons)
+trait IncrementalBuildBehavior[T, /*@specialized(Double)*/ O] {
 	def defaultValue: O
-	val idxMap = new HashMap[String,mutable.ArrayBuffer[Int]]()
-	var elements = mutable.ArrayBuffer[T]()
-	var values = mutable.ArrayBuffer[O]()
+	val idxMap = new HashMap[String,Array[Int]]()
+	var elements: Array[T] = null
+	var values: Array[O] = null
 
 	def init(pairs: Iterable[(String,T)]) {
 		var cnt = 0
+		val elms = ArrayBuffer[T]()
+		val vals = ArrayBuffer[O]()
 		pairs foreach { case (key, elem) =>
 			var idxs = idxMap.get(key)
 			if(idxs == null) {
-				idxs = mutable.ArrayBuffer[Int]()
-				idxMap.put(key, idxs)
+				idxs = Array[Int]()
 			}
-			idxs += cnt
-			elements += elem
-			values += defaultValue
+			idxs = idxs :+ cnt
+			idxMap.put(key, idxs)
+			elms += elem
+			vals += defaultValue
 			cnt += 1
 		}
+		elements = makeElementArray(elms)
+		values = makeValArray(vals)
 	}
 
 	def apply(key: String) {
@@ -73,7 +77,9 @@ trait IncrementalBuildBehavior[T,O] {
 		}
 	}
 
-	def getValues(): mutable.ArrayBuffer[O] = values
+	def makeValArray(values: ArrayBuffer[O]): Array[O]
+	def makeElementArray(elements: ArrayBuffer[T]): Array[T]
+	def getValues(): Array[O] = values
 
 	def applyNone(idx: Int, elem: T): O
 	def applyLong(idx: Int, elem: T, lng: Long): O
