@@ -7,10 +7,10 @@ import com.sparcedge.turbine.query.OutputResult
 object CustomJsonSerializer {
 
 	def serializeAggregateGroupMap(aggregateMap: WrappedTreeMap[String,List[OutputResult]]): String = {		
-		serializeGroupMap(aggregateMap, serializeReducedResults, serializeReducedResultsMeta)
+		serializeGroupMap(aggregateMap, serializeReducedResults)
 	}
 
-	def serializeGroupMap[T<:Any](groupMap: WrappedTreeMap[String,List[T]], valueSerializer: (Iterable[T]) => String, metaSerializer: (Iterable[T]) => String): String = {
+	def serializeGroupMap[T<:Any](groupMap: WrappedTreeMap[String,List[T]], valueSerializer: (Iterable[T]) => String): String = {
 		var prevElements = Array[String]()
 		val jsonBuilder = new StringBuilder
 		
@@ -54,10 +54,6 @@ object CustomJsonSerializer {
 				builder.append(",").append("{\"group\":\"").append(curr(i)).append("\"").append(",\"data\":[")
 			}
 		}
-	}
-
-	private def serializeReducedResultsMeta(reducedResults: Iterable[OutputResult]): String = {
-		reducedResults.map(result => "\"" + result.output + "-count\":" + result.count).mkString(",")
 	}
 
 	private def serializeReducedResults(reducedResults: Iterable[OutputResult]): String = {
