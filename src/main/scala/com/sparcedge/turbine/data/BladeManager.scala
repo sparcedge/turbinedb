@@ -62,10 +62,11 @@ class BladeManager(blade: Blade) extends Actor with ActorLogging { this: BladeMa
 	}
 }
 
-case class IndexKey (reducer: Reducer, matches: Iterable[Match], groupings: Iterable[Grouping]) {
+case class IndexKey (reducer: Reducer, extenders: Iterable[Extend], matches: Iterable[Match], groupings: Iterable[Grouping]) {
+	val uniqueExtendStr = extenders.map(_.uniqueId).toList.mkString(".")
 	val uniqueMatchStr = matches.map(_.uniqueId).toList.sorted.mkString(".")
 	val uniqueGroupStr = groupings.map(_.uniqueId).toList.mkString(".")
-	val id = s"${reducer.reduceType}.${reducer.segment}.${uniqueMatchStr}.${uniqueGroupStr}"
+	val id = s"${reducer.reduceType}.${reducer.segment}.${uniqueExtendStr}.${uniqueMatchStr}.${uniqueGroupStr}"
 }
 
 trait BladeManagerProvider {

@@ -1,6 +1,5 @@
 package com.sparcedge.turbine.query
 
-import play.api.libs.json.Json
 import play.api.libs.json.{JsObject,JsNumber,JsString,JsValue,JsArray}
 
 import com.sparcedge.turbine.event.Event

@@ -38,21 +38,26 @@ class DataPartition(val blade: Blade) {
 		}
 	}
 
+	// TODO: Prevent Query Processing of segments shadowed by extend values
 	def populateIndexes(indexes: Iterable[Index]) {
 		val keys = indexes.map(_.indexKey)
 		val reqSegments = retrieveRequiredSegments(keys)
 		val optSegments = retrieveOptionalSegments(keys)
 		if(reqSegments.forall(dataSegments.contains(_)) && optSegments.exists(dataSegments.contains(_))) {
-			populateIndexes(indexes, reqSegments ++ optSegments)
+			populateIndexes(indexes, (reqSegments ++ optSegments).toList.distinct)
 		}
 	}
 
 	def populateIndexes(indexes: Iterable[Index], segments: Iterable[String]) {
+		val extenders = indexes.head.indexKey.extenders
 		val matches = indexes.head.indexKey.matches
 		val groupings = indexes.head.indexKey.groupings
-		val matchBuilder = new MatchBuilder(matches)
-		val groupStrBuilder = new GroupStringBuilder(groupings, blade)
-		val indexUpdateBuilder = new IndexUpdateBuilder(indexes)
+
+		val extendBuilder = ExtendBuilder(extenders)
+		val matchBuilder = MatchBuilder(matches)
+		val groupStrBuilder = GroupStringBuilder(groupings, blade)
+		val indexUpdateBuilder = IndexUpdateBuilder(indexes)
+
 		val segmentBuffers = createSegmentBuffers(segments.toList) 
 		val tsBuffer = new SegmentBuffer("ts", blade)
 		val timer = new Timer()
@@ -61,7 +66,8 @@ class DataPartition(val blade: Blade) {
 		try {
 			
 			while(tsBuffer.buffer.hasRemaining) {
-				readNextFromBuffers(segmentBuffers, tsBuffer, matchBuilder, groupStrBuilder, indexUpdateBuilder)
+				readNextFromBuffers(segmentBuffers, tsBuffer, extendBuilder, matchBuilder, groupStrBuilder, indexUpdateBuilder)
+				applyExtendSegments(extendBuilder, matchBuilder, groupStrBuilder, indexUpdateBuilder)
 				if(matchBuilder.satisfiesAllMatches) {
 					val grpStr = groupStrBuilder.buildGroupString
 					indexUpdateBuilder.executeUpdates(grpStr)
@@ -78,18 +84,19 @@ class DataPartition(val blade: Blade) {
 		timer.stop("Processed " + cnt + " Events")
 	}
 
-	def readNextFromBuffers(segmentBuffers: Iterable[SegmentBuffer], tsBuffer: SegmentBuffer, matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
+	def readNextFromBuffers(segmentBuffers: Iterable[SegmentBuffer], tsBuffer: SegmentBuffer, extendBuilder: ExtendBuilder, 
+									matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
 		tsBuffer.buffer.readBytes(lngArr, 8)
 		val timestamp = toLong(lngArr)
 
 		segmentBuffers.foreach { segBuf =>
-			readSegmentBasedOnType(segBuf, matchBuilder, grpStringBuilder, indexUpdateBuilder)
+			readSegmentBasedOnType(segBuf, extendBuilder, matchBuilder, grpStringBuilder, indexUpdateBuilder)
 		}
 
 		grpStringBuilder("ts", timestamp)
 	}
 
-	def readSegmentBasedOnType(segmentBuffer: SegmentBuffer, matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
+	def readSegmentBasedOnType(segmentBuffer: SegmentBuffer, extendBuilder: ExtendBuilder, matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
 		val segment = segmentBuffer.segment
 		val buffer = segmentBuffer.buffer
 		val byte = buffer.readByte
@@ -99,6 +106,7 @@ class DataPartition(val blade: Blade) {
 		} else if(byte == 1) {
 			buffer.readBytes(lngArr,8)
 			val dbl = toDouble(lngArr)
+			extendBuilder(segment, dbl)
 			matchBuilder(segment, dbl)
 			grpStringBuilder(segment, dbl)
 			indexUpdateBuilder(segment, dbl)
@@ -113,12 +121,29 @@ class DataPartition(val blade: Blade) {
 		}
 	}
 
+	def applyExtendSegments(extendBuilder: ExtendBuilder, matchBuilder: MatchBuilder, groupStrBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
+		val values = extendBuilder.extensionValues
+		var cnt = 0
+		while(cnt < values.length) {
+			val valSeg = values(cnt)
+			if(valSeg != null) {
+				val seg = valSeg._1
+				val value = valSeg._2
+				matchBuilder(seg, value)
+				groupStrBuilder(seg, value)
+				indexUpdateBuilder(seg, value)
+			}
+			cnt += 1
+		}
+		extendBuilder.reset()
+	}
+
 	def createSegmentBuffers(segments: Iterable[String]): Iterable[SegmentBuffer] = {
 		segments.filter(seg => dataSegments.contains(seg) && seg != "ts").map(new SegmentBuffer(_, blade))
 	}
 
 	def retrieveRequiredSegments(keys: Iterable[IndexKey]): Iterable[String] = {
-		keys.head.matches.map(_.segment) ++: keys.head.groupings.map(_.segment)
+		keys.head.matches.map(_.segment) ++: keys.head.groupings.map(_.segment) ++: keys.head.extenders.map(_.segments).reduce(_++_)
 	}
 
 	def retrieveOptionalSegments(keys: Iterable[IndexKey]): Iterable[String] = {
@@ -203,11 +228,3 @@ class DataPartition(val blade: Blade) {
 		}
 	}
 }
-
-
-
-
-
-
-
-

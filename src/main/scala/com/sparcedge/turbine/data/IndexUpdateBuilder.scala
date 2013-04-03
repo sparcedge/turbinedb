@@ -1,57 +1,63 @@
 package com.sparcedge.turbine.data
 
 import scala.collection.mutable.ArrayBuffer
-
 import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 
-// TODO: Be able to handle non numeric reduce cases
-class IndexUpdateBuilder(indexes: Iterable[Index]) extends IncrementalBuildBehavior[Index,Double] {
-	val defaultValue: Double = 0.0	
-	var values: Array[Double] = new Array[Double](0)
-	init(indexes map { index => (index.indexKey.reducer.segment -> index) })
-	val updateInds = new Array[Boolean](getValues().size)
+object IndexUpdateBuilder {
+	def apply(indexes: Iterable[Index]): IndexUpdateBuilder = {
+		val indexWrappers = indexes.map(new IndexWrapper(_))
+		new IndexUpdateBuilder(indexWrappers)
+	}
+}
 
-	def makeValArray(values: ArrayBuffer[Double]): Array[Double] = {
-		val arr = new Array[Double](values.length)
-		var cnt = 0
-		while(cnt < values.length) {
-			arr(cnt) = values(cnt)
-			cnt += 1
-		}
-		arr
-	}
-	def makeElementArray(elements: ArrayBuffer[Index]): Array[Index] = elements.toArray
+class IndexUpdateBuilder(indexWrappers: Iterable[IndexWrapper]) 
+		extends IncrementalBuildBehavior[IndexWrapper](indexWrappers.map(iw => (iw -> List(iw.index.indexKey.reducer.segment)))) {
 
-	def applyNone(idx: Int, index: Index): Double = 0.0
-	def applyNumeric(idx: Int, index: Index, num: Double): Double = {
-		updateInds(idx) = true
-		num
-	}
-	def applyString(idx: Int, index: Index, str: String): Double = {
-		updateInds(idx) = index.indexKey.reducer.reduceType == "count"
-		0.0
-	}
-	def applyLong(idx: Int, index: Index, lng: Long): Double = {
-		updateInds(idx) = true
-		lng.toDouble
+	var indexesArr = indexWrappers.toArray
+	def createElementArray(): Array[IndexWrapper] = Array[IndexWrapper]()
+	def appendElementArray(arr: Array[IndexWrapper], elem: IndexWrapper): Array[IndexWrapper] = arr :+ elem
+
+	def applyNone(key: String, wrapper: IndexWrapper) { /* No Update */ }
+	def applyNumeric(key: String, wrapper: IndexWrapper, num: Double) { wrapper(num) }
+	def applyLong(key: String, wrapper: IndexWrapper, lng: Long) { wrapper(lng.toDouble) }
+
+	def applyString(key: String, wrapper: IndexWrapper, str: String) {
+		if(wrapper.index.indexKey.reducer.reduceType == "count") { wrapper(1.0) }
 	}
 
 	def reset() {
 		var cnt = 0
-		while(cnt < updateInds.length) {
-			updateInds(cnt) = false
+		while(cnt < indexesArr.length) {
+			indexesArr(cnt).reset()
 			cnt += 1
 		}
 	}
 
 	def executeUpdates(grpStr: String) {
 		var cnt = 0
-		val values = getValues()
-		while (cnt < values.length) {
-			if(updateInds(cnt)) {
-				elements(cnt).updateUnchecked(values(cnt), grpStr)
-			}
+		while (cnt < indexesArr.length) {
+			indexesArr(cnt).update(grpStr)
 			cnt += 1
 		}
+	}
+}
+
+class IndexWrapper(val index: Index) {
+	private var updated = false
+	private var value: Double = 0.0
+
+	def apply(num: Double) {
+		value = num
+		updated = true
+	}
+
+	def update(grpStr: String) {
+		if(updated) {
+			index.updateUnchecked(value, grpStr)
+		}
+	}
+
+	def reset() {
+		updated = false
 	}
 }

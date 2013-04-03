@@ -7,19 +7,25 @@ import com.sparcedge.turbine.Blade
 import com.sparcedge.turbine.behaviors.IncrementalBuildBehavior
 import QueryUtil._
 
-class GroupStringBuilder(groupings: Iterable[Grouping], blade: Blade) extends IncrementalBuildBehavior[Grouping,String] {
+object GroupStringBuilder {
+	def apply(groupings: Iterable[Grouping], blade: Blade): GroupStringBuilder = {
+		val groupWrappers = groupings.zipWithIndex.map { case (grouping,idx) => new GroupingWrapper(grouping, idx)}
+		new GroupStringBuilder(groupWrappers, blade)
+	}
+}
+
+class GroupStringBuilder(groupWrappers: Iterable[GroupingWrapper], blade: Blade)
+		extends IncrementalBuildBehavior[GroupingWrapper](groupWrappers.map(gw => (gw -> List(gw.grouping.segment)))) {
+
 	var dataGrpValue = ""
-	val defaultValue: String = "nil"
-	var values: Array[String] = new Array[String](0)
-	init(groupings map { grouping => (grouping.segment -> grouping) })
+	val values = new Array[String](groupWrappers.size)
+	def createElementArray(): Array[GroupingWrapper] = Array[GroupingWrapper]()
+	def appendElementArray(arr: Array[GroupingWrapper], elem: GroupingWrapper): Array[GroupingWrapper] = arr :+ elem
 
-	def makeValArray(values: ArrayBuffer[String]): Array[String] = values.toArray
-	def makeElementArray(elements: ArrayBuffer[Grouping]): Array[Grouping] = elements.toArray
-
-	def applyNone(idx: Int, grouping: Grouping): String = "nil"
-	def applyNumeric(idx: Int, grouping: Grouping, num: Double): String = grouping(num)
-	def applyString(idx: Int, grouping: Grouping, str: String): String = grouping(str)
-	def applyLong(idx: Int, grouping: Grouping, lng: Long): String = grouping(lng)
+	def applyNone(key: String, wrapper: GroupingWrapper) { values(wrapper.idx) = "nil" }
+	def applyNumeric(key: String, wrapper: GroupingWrapper, num: Double) { values(wrapper.idx) = wrapper.grouping(num) }
+	def applyString(key: String, wrapper: GroupingWrapper, str: String) { values(wrapper.idx) = wrapper.grouping(str) }
+	def applyLong(key: String, wrapper: GroupingWrapper, lng: Long) { values(wrapper.idx) = wrapper.grouping(lng) }
 
 	override def apply(key: String, lng: Long) {
 		dataGrpValue = DATA_GROUPING(lng, blade.periodStartMS)
@@ -27,6 +33,8 @@ class GroupStringBuilder(groupings: Iterable[Grouping], blade: Blade) extends In
 	}
 
 	def buildGroupString(): String = {
-		createGroupString(dataGrpValue, getValues)
+		createGroupString(dataGrpValue, values)
 	}
 }
+
+class GroupingWrapper(val grouping: Grouping, val idx: Int)

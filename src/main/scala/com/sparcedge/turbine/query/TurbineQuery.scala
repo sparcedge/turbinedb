@@ -19,10 +19,11 @@ object TurbineQuery {
 	def apply(parseQuery: TurbineQueryParse): TurbineQuery = {
 		val start = parseQuery.start
 		val end = parseQuery.end
+		val extenders = parseQuery.extend map { jobjs => jobjs map { jobj => Extend(jobj) } } getOrElse (List[Extend]())
 		val matches = parseQuery.`match` map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (List[Match]())
 		val groupings = parseQuery.group map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (List[Grouping]())
 		val reducers = parseQuery.reduce.map(ReducerPackage(_))
-		new TurbineQuery(start, end, matches, groupings, reducers)
+		new TurbineQuery(start, end, extenders, matches, groupings, reducers)
 	}
 
 	def tryParse(queryStr: String): Try[TurbineQuery] = {
@@ -43,6 +44,7 @@ object TurbineQuery {
 case class TurbineQueryParse (
 	start: Option[Long],
 	end: Option[Long],
+	extend: Option[List[JsObject]],
 	`match`: Option[List[JsObject]],
 	group: Option[List[JsObject]],
 	reduce: List[JsObject]
@@ -51,12 +53,13 @@ case class TurbineQueryParse (
 class TurbineQuery (
 	val start: Option[Long] = None,
 	val end: Option[Long] = None,
+	val extenders: List[Extend] = List[Extend](),
 	val matches: List[Match] = List[Match](),
 	val groupings: List[Grouping] = List[Grouping](),
 	val reducers: List[ReducerPackage] = List[ReducerPackage]()
 ) {
 
 	def createAggregateIndexKey(reducer: Reducer): IndexKey = {
-		IndexKey(reducer, matches, groupings)
+		IndexKey(reducer, extenders, matches, groupings)
 	}
 }

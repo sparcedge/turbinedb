@@ -5,7 +5,7 @@ import com.github.retronym.SbtOneJar
 object BuildSettings {
 	val buildOrganization = "com.sparcedge"
 	val buildVersion      = "0.1"
-	val buildScalaVersion = "2.10.0"
+	val buildScalaVersion = "2.10.1"
 
 	val buildSettings = Defaults.defaultSettings ++ Seq (
 		organization := buildOrganization,
