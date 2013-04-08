@@ -7,7 +7,7 @@ import play.api.libs.json.{JsObject,JsString,JsValue,JsNumber}
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.util.CrazierDateUtil._
 
-// Convert JsObject to Map....easier parse
+// TODO: Convert JsObject to Map....easier parse
 object Grouping {
 	def apply(jsObj: JsObject): Grouping = {
 		retrieveGroupingValue(jsObj) match {
@@ -31,7 +31,7 @@ object Grouping {
 	}
 }
 
-trait Grouping {
+abstract class Grouping {
 	val segment: String
 
 	def apply(ts: Long, monthStart: Long): String = ts.toString
@@ -59,7 +59,7 @@ object DurationGrouping {
 	}
 }
 
-trait DurationGrouping extends Grouping {
+abstract class DurationGrouping extends Grouping {
 	val duration: String
 	val segment = "ts"
 	val offset: Int
