@@ -39,7 +39,7 @@ trait BatchBehavior { this: Actor =>
 	}
 
 	def scheduleFlush() {
-		scheduledFlush = Some(context.system.scheduler.scheduleOnce(maxTimeUnflushed milliseconds, self, Flush))
+		scheduledFlush = Some(context.system.scheduler.scheduleOnce(maxTimeUnflushed.milliseconds, self, Flush))
 	}
 
 	def flushBatch()

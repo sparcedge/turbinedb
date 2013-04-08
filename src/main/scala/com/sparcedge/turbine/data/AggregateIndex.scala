@@ -55,8 +55,11 @@ class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with ActorL
 class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade) {
 	val index = new WrappedTreeMap[String,ReducedResult]()
 	val groupings = indexKey.groupings
+	val extenders = indexKey.extenders
 
 	def update(event: Event) {
+		val extEvent = if (extenders.size > 0) extendEvent(event, extenders) else event
+
 		if(eventMatchesAllCriteria(event, indexKey.matches)) {
 			updateUnchecked(event)
 		}

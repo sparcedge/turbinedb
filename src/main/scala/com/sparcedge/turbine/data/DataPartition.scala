@@ -96,7 +96,8 @@ class DataPartition(val blade: Blade) {
 		grpStringBuilder("ts", timestamp)
 	}
 
-	def readSegmentBasedOnType(segmentBuffer: SegmentBuffer, extendBuilder: ExtendBuilder, matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
+	def readSegmentBasedOnType(segmentBuffer: SegmentBuffer, extendBuilder: ExtendBuilder, 
+			matchBuilder: MatchBuilder, grpStringBuilder: GroupStringBuilder, indexUpdateBuilder: IndexUpdateBuilder) {
 		val segment = segmentBuffer.segment
 		val buffer = segmentBuffer.buffer
 		val byte = buffer.readByte

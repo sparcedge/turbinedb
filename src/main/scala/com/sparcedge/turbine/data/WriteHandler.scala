@@ -27,7 +27,7 @@ import WriteHandler._
 
 class WriteHandler(bladeManagerRepository: ActorRef) extends Actor {
 
-	implicit val timeout = Timeout(240 seconds)
+	implicit val timeout = Timeout(240.seconds)
 	implicit val ec: ExecutionContext = context.dispatcher
 
 	def receive = {

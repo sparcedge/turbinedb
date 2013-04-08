@@ -41,7 +41,7 @@ object Match {
 	}
 }
 
-trait Match {
+abstract class Match {
 	val segment: String
 	val uniqueId: String
 
@@ -52,7 +52,7 @@ trait Match {
 	def apply(): Boolean = false
 }
 
-trait NumericMatch extends Match {
+abstract class NumericMatch extends Match {
 	val value: Double
 	override def apply(event: Event): Boolean = event.getDouble(segment).map(evaluate(_)).getOrElse(false)
 	override def apply(numeric: Double): Boolean = evaluate(numeric)
@@ -60,7 +60,7 @@ trait NumericMatch extends Match {
 	def evaluate(testVal: Double): Boolean
 }
 
-trait StringMatch extends Match {
+abstract class StringMatch extends Match {
 	val value: String
 	override def apply(event: Event): Boolean = event.getString(segment).map(evaluate(_)).getOrElse(false)
 	override def apply(str: String): Boolean = evaluate(str)

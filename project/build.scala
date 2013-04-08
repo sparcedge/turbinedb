@@ -68,4 +68,5 @@ object TurbineDB extends Build {
 			.settings ( SbtOneJar.oneJarSettings : _* )
 			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
+			.settings ( scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature") )
 }

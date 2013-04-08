@@ -73,10 +73,3 @@ trait BladeManagerProvider {
 	def newDataPartitionManager(blade: Blade): Actor = new DataPartitionManager(blade) with DataPartitionManagerProvider
 	def newAggregateIndex(key: IndexKey, blade: Blade): Actor = new AggregateIndex(key, blade)
 }
-
-
-
-
-
-
-

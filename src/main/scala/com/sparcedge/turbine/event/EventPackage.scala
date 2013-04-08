@@ -1,7 +1,6 @@
 package com.sparcedge.turbine.event
 
 import scala.util.{Try,Success,Failure}
-import scala.collection.mutable
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.DateTime
 import play.api.libs.json.Json
@@ -20,12 +19,12 @@ object EventPackage {
 	}
 
 	def convertIngressEventToEvent(iEvent: IngressEvent): Event = {
-		val strValues = mutable.Map[String,String]()
-		val dblValues = mutable.Map[String,Double]()
+		var strValues = Map[String,String]()
+		var dblValues = Map[String,Double]()
 
 		iEvent.data.fields.foreach { 
-			case (segment, JsString(value)) => strValues(segment) = value
-			case (segment, JsNumber(value)) => dblValues(segment) = value.toDouble
+			case (segment, JsString(value)) => strValues += (segment -> value)
+			case (segment, JsNumber(value)) => dblValues += (segment -> value.toDouble)
 			case _ =>
 		}
 

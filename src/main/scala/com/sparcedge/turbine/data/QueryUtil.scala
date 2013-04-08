@@ -54,4 +54,17 @@ object QueryUtil {
 		}
 		builder.toString
 	}
+
+	def extendEvent(event: Event, extenders: Iterable[Extend]): Event = {
+		val extendResults = extenders.flatMap(_.evaluate(event))
+		if(extendResults.size > 0) {
+			var newDblValues = event.dblValues
+			extendResults foreach { res =>
+				newDblValues += res
+			}
+			event.copy(dblValues = newDblValues)
+		} else {
+			event
+		}
+	}
 }

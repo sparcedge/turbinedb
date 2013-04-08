@@ -1,15 +1,13 @@
 package com.sparcedge.turbine.event
 
-import scala.collection.mutable
-
 case class Event (
 	val its: Long, 
 	val ts: Long, 
-	val strValues: mutable.Map[String,String], 
-	val dblValues: mutable.Map[String,Double]
+	val strValues: Map[String,String], 
+	val dblValues: Map[String,Double]
 ) {
 	def apply(segment: String): Option[Any] = {
-		dblValues.get(segment) orElse strValues.get(segment)	
+		dblValues.get(segment) orElse strValues.get(segment)
 	}
 
 	def getDouble(segment: String): Option[Double] = {

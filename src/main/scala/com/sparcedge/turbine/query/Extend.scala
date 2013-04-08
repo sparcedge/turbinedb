@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.query
 
 import play.api.libs.json.{JsObject,JsString,JsValue,JsArray}
+import com.sparcedge.turbine.event.Event
 
 object Extend {
 	def apply(jsObj: JsObject): Extend = {
@@ -57,9 +58,21 @@ class Extend(val out: String, val rootElement: ExtendElement, val segmentIndexMa
 
 	def uniqueId = rootElement.uniqueId
 
-	//def evaluate(event: Event): Double = {
-	//	
-	//}
+	def evaluate(event: Event): Option[(String,Double)] = {
+		tryCreateValArrayFromEvent(event).map(out -> rootElement.evaluate(_))
+	}
+
+	private def tryCreateValArrayFromEvent(event: Event): Option[Array[Double]] = {
+		val arr = new Array[Double](segments.size)
+		var containsAll = true
+
+		segmentIndexMap foreach { case (seg,idx) =>
+			val value = event.getDoubleUnsafe(seg)
+			if (value != null) arr(idx) = value else containsAll = false
+		}
+
+		if (containsAll) Some(arr) else None
+	}
 }
 
 trait ExtendElement {
@@ -69,7 +82,7 @@ trait ExtendElement {
 
 case class ValueExtendElement(idx: Int, segment: String) extends ExtendElement {
 	def evaluate(valArr: Array[Double]): Double = valArr(idx)
-	def uniqueId = segment
+	val uniqueId = segment
 }
 
 case class MultiplyExtendElement(elems: Array[ExtendElement]) extends ExtendElement {
@@ -83,7 +96,7 @@ case class MultiplyExtendElement(elems: Array[ExtendElement]) extends ExtendElem
 		product
 	}
 
-	def uniqueId = s"""mul.${elems.map(_.uniqueId).mkString(".")}"""
+	val uniqueId = s"""mul.${elems.map(_.uniqueId).mkString(".")}"""
 }
 
 case class DivideExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends ExtendElement {
@@ -91,7 +104,7 @@ case class DivideExtendElement(elem1: ExtendElement, elem2: ExtendElement) exten
 		val value2 = elem2.evaluate(valArr)
 		if(value2 == 0) 0 else elem1.evaluate(valArr) / value2
 	}
-	def uniqueId = s"""div.${elem1.uniqueId}.${elem2.uniqueId}"""
+	val uniqueId = s"""div.${elem1.uniqueId}.${elem2.uniqueId}"""
 }
 
 case class AddExtendElement(elems: Array[ExtendElement]) extends ExtendElement {
@@ -104,12 +117,12 @@ case class AddExtendElement(elems: Array[ExtendElement]) extends ExtendElement {
 		}
 		sum
 	}
-	def uniqueId = s"""add.${elems.map(_.uniqueId).mkString(".")}"""
+	val uniqueId = s"""add.${elems.map(_.uniqueId).mkString(".")}"""
 }
 
 case class SubtractExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends ExtendElement {
 	def evaluate(valArr: Array[Double]): Double = {
 		elem1.evaluate(valArr) - elem2.evaluate(valArr)
 	}
-	def uniqueId = s"""sub.${elem1.uniqueId}.${elem2.uniqueId}"""
+	val uniqueId = s"""sub.${elem1.uniqueId}.${elem2.uniqueId}"""
 }

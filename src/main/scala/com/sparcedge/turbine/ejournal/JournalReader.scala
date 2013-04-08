@@ -66,7 +66,7 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 	}
 
 	def scheduleProcessJournalMessage() {
-		context.system.scheduler.scheduleOnce(processJournalDelay milliseconds, self, ProcessJournalEvents)
+		context.system.scheduler.scheduleOnce(processJournalDelay.milliseconds, self, ProcessJournalEvents)
 	}
 
 	def createLocationKey(loc: Location): String = {
