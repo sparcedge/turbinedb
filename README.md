@@ -24,15 +24,22 @@ Generate Eclipse Project
 Compile
 
 	$ sbt compile
-	
+
 Test	
 
 	$ sbt test
+
+Run
+
+	$ sbt run
 
 Package (Create Jar)
 
 	$ sbt one-jar
 
+Run Benchmarks (Google Caliper)
+
+	$ sbt benchmark/run
 
 Basic Use
 ---------
@@ -59,7 +66,9 @@ Only a reducer is required.
 	{
 		"start": <timestamp>, // Optional
 		"end": <timestamp>, // Optional
-		"match": [ // Optional
+		"extend": [
+			{"ext-value": ["add", "segment1", ["mul", "segment2", "segment3"]]}
+		], "match": [ // Optional
 			{"ram": {"gt": 50}}
 		], "group": [ // Optional
 			{"duration": "hour"}
@@ -73,5 +82,5 @@ Only a reducer is required.
 Query needs to be URI encoded [eg: encodeURIComponent(query) in node/js console]
 
 	GET: http://localhost:8080/db/mydatabase/mycollection?m=<query>
-	
+
 
