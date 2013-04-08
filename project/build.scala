@@ -40,13 +40,17 @@ object Dependencies {
 	val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
 	val journalio = "com.github.sbtourist" % "journalio" % "1.3"
 
-	val scalatest	= "org.scalatest" %% "scalatest" % "1.9.1" % "test,perftest"
+	val scalatest = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+	val googleCaliper = "com.google.caliper" % "caliper" % "0.5-rc1"
+	val googleInstrumenter = "com.google.code.java-allocation-instrumenter" % "java-allocation-instrumenter" % "2.0"
 
 	val akkaDependencies = Seq(akkaActor, akkaRemote, akkaSlf4j, akkaTestkit, akkaCluster)
 	val sprayDependencies = Seq(sprayCan, sprayRouting)
 	val miscDependencies = Seq(jodaTime, jodaConvert, slf4j, journalio, playJson)
 	val testDependencies = Seq(scalatest)
 	val allDependencies = akkaDependencies ++ sprayDependencies ++ miscDependencies ++ testDependencies
+
+	val benchmarkDependencies = Seq(googleCaliper, googleInstrumenter)
 }
 
 object TurbineDB extends Build {
@@ -54,19 +58,22 @@ object TurbineDB extends Build {
 	import BuildSettings._
 	import Defaults._
 
-	lazy val PerfTest = config("perftest") extend(Test)
-	lazy val perfTestSettings = inConfig(PerfTest)(
-		Defaults.testSettings ++ 
-		Seq(testGrouping <<= singleTestGroup(test), parallelExecution := false)
-	)
-
 	lazy val turbineDB = 
 		Project ("turbine-db", file("."))
-			.configs( PerfTest )
 			.settings ( buildSettings : _* )
-			.settings ( perfTestSettings : _* )
 			.settings ( SbtOneJar.oneJarSettings : _* )
 			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature") )
+
+	lazy val turbineBenchmark = 
+		Project ("benchmark", file("benchmark"))
+			.settings ( buildSettings : _* )
+			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo) )
+			.settings ( libraryDependencies ++= Dependencies.allDependencies )
+			.settings ( libraryDependencies ++= Dependencies.benchmarkDependencies )
+			.settings ( fork in run := true )
+			.settings ( javaOptions in run <++= (fullClasspath in Runtime) map { cp => Seq("-cp", sbt.Build.data(cp).mkString(":")) } )
+			.dependsOn ( turbineDB )
+
 }
