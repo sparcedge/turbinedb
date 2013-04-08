@@ -24,7 +24,6 @@ class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with Ba
 
 	val partition = newDataPartition(blade)
 	log.info("Created data partition: {}", blade.key)
-	lazy val eventListener = TurbineManager.universalEventWrittenListener
 	val maxBatchSize = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-batched-events")
 	val maxTimeUnflushed = context.system.settings.config.getInt("com.sparcedge.turbinedb.data.partition.max-time-batched")
 
@@ -44,7 +43,7 @@ class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with Ba
 	def flushBatch(batch: Iterable[(String,Event)]) {
 		log.debug("Writing {} events to disk ({})", batch.size, blade.key)
 		partition.writeEvents(batch.map(_._2))
-		eventListener ! EventsWrittenToDisk(batch.map(_._1))
+		TurbineManager.eventsWrittenListener.foreach { _ ! EventsWrittenToDisk(batch.map(_._1)) }
 	}
 }
 

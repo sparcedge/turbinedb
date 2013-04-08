@@ -16,8 +16,7 @@ import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandle
 object TurbineManager {
 	case class QueryDispatchRequest(queryPkg: TurbineQueryPackage, ctx: RequestContext)
 	case class AddEventRequest(eventIngressPkg: EventIngressPackage, ctx: RequestContext)
-	// TODO: Nasty Nasty Hack
-	var universalEventWrittenListener: ActorRef = null
+	var eventsWrittenListener: Option[ActorRef] = null
 }
 
 import TurbineManager._
@@ -52,7 +51,7 @@ class TurbineManager() extends Actor with ActorLogging { this: TurbineManagerPro
 	)
 	log.info("Created JournalWriter")
 
-	universalEventWrittenListener = journalReader
+	eventsWrittenListener = Some(journalReader)
 
 	def receive = {
 		case QueryDispatchRequest(queryPkg, ctx) =>
