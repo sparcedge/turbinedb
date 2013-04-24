@@ -28,7 +28,7 @@ import QueryUtil._
 
 class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 
-	implicit val timeout = Timeout(240 seconds)
+	implicit val timeout = Timeout(240.seconds)
 	implicit val ec: ExecutionContext = context.dispatcher 
 	val monthFmt = DateTimeFormat.forPattern("yyyy-MM")
 
@@ -45,7 +45,8 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 				bladeManagers <- getBladeManagers(queryPackage);
 				indexManagers <- getIndexManagers(bladeManagers, query);
 				indexes <- getIndexes(indexManagers);
-				json <- future { createJsonResultFromIndexes(indexes, query, outMap) }
+				combinedIndex <- future { sliceFlattenAndCombineIndexes(indexes, query, outMap) };
+				json <- future { convertCombinedIndexToJson(combinedIndex) }
 			) yield json
 
 			jsonResult.onComplete {
@@ -81,12 +82,6 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		indexResponses.map(responses => responses.map(res => res.index))
 	}
 
-	def createJsonResultFromIndexes(indexes: Iterable[Index], query: TurbineQuery, outMap: Map[Reducer,String]): String = {
-		val combinedIndex = sliceFlattenAndCombineIndexes(indexes, query, outMap)
-		val postReducedIndex = postReduceIndex(combinedIndex, query)
-		convertIndexToJson(postReducedIndex)
-	}
-
 	def sliceFlattenAndCombineIndexes(indexes: Iterable[Index], query: TurbineQuery, outMap: Map[Reducer,String]): WrappedTreeMap[String,List[OutputResult]] = {
 		val sliced = indexes.map(idx => (idx -> sliceIndex(idx, query)))
 		val flattened = sliced map { case (idx, agg) => removeHourGroupFlattendAndReduceAggregate(agg, retrieveOutputParameter(idx, outMap)) }
@@ -97,8 +92,8 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		outMap(index.indexKey.reducer)
 	}
 
-	def convertIndexToJson(index: WrappedTreeMap[String,List[OutputResult]]): String = {
-		CustomJsonSerializer.serializeAggregateGroupMap(index)
+	def convertCombinedIndexToJson(combined: WrappedTreeMap[String,List[OutputResult]]): String = {
+		CustomJsonSerializer.serializeAggregateGroupMap(combined)
 	}
 
 	private def sliceIndex(indexVal: Index, query: TurbineQuery): WrappedTreeMap[String,ReducedResult] = {
@@ -145,26 +140,5 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 			}
 		}
 		combined
-	}
-
-
-
-	def postReduceIndex(aggregate: WrappedTreeMap[String,List[OutputResult]], query: TurbineQuery): WrappedTreeMap[String,List[OutputResult]] = {
-		val postReducers = query.postReducers
-		if(postReducers.size > 0) {
-			val postAgg = new WrappedTreeMap[String,List[OutputResult]]()
-			postReducers foreach { preducer =>
-				val outList = postAgg.getOrElseUpdate(preducer.reducer.segment, List[OutputResult]())
-				postAgg(preducer.reducer.segment) = preducer.reducer.createReducedResult.copyForOutput(preducer.outputProperty) :: outList
-			}
-			aggregate.foreach { case (key, results) =>
-				results.foreach { res =>
-					postAgg(res.output).foreach(_.reduce(res.getResultValue))
-				}
-			}
-			postAgg
-		} else {
-			aggregate
-		}
 	}
 }
