@@ -63,8 +63,7 @@ class DataPartition(val blade: Blade) {
 		val timer = new Timer()
 		timer.start()
 		var cnt = 0
-		try {
-			
+		try {	
 			while(tsBuffer.buffer.hasRemaining) {
 				readNextFromBuffers(segmentBuffers, tsBuffer, extendBuilder, matchBuilder, groupStrBuilder, indexUpdateBuilder)
 				applyExtendSegments(extendBuilder, matchBuilder, groupStrBuilder, indexUpdateBuilder)
@@ -144,7 +143,8 @@ class DataPartition(val blade: Blade) {
 	}
 
 	def retrieveRequiredSegments(keys: Iterable[IndexKey]): Iterable[String] = {
-		keys.head.matches.map(_.segment) ++: keys.head.groupings.map(_.segment) ++: keys.head.extenders.map(_.segments).reduce(_++_)
+		val extendSegments = if(keys.head.extenders.map(_.segments).size > 0) keys.head.extenders.map(_.segments).reduce(_++_) else List[String]()
+		keys.head.matches.map(_.segment) ++: keys.head.groupings.map(_.segment) ++: extendSegments
 	}
 
 	def retrieveOptionalSegments(keys: Iterable[IndexKey]): Iterable[String] = {
