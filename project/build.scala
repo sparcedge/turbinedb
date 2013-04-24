@@ -22,7 +22,7 @@ object Resolvers {
 }
 
 object Dependencies {
-	val akkaVersion = "2.1.1"
+	val akkaVersion = "2.1.2"
 	val sprayVersion = "1.1-M7"
 
 	val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
@@ -65,6 +65,7 @@ object TurbineDB extends Build {
 			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo, playJsonRelRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature") )
+			.settings ( crossTarget := new File("/Users/bgilbert/projects/personal/turbine-db/build") )
 
 	lazy val turbineBenchmark = 
 		Project ("benchmark", file("benchmark"))
@@ -74,6 +75,7 @@ object TurbineDB extends Build {
 			.settings ( libraryDependencies ++= Dependencies.benchmarkDependencies )
 			.settings ( fork in run := true )
 			.settings ( javaOptions in run <++= (fullClasspath in Runtime) map { cp => Seq("-cp", sbt.Build.data(cp).mkString(":")) } )
+			.settings ( crossTarget := new File("/Users/bgilbert/projects/personal/turbine-db/benchmark/build") )
 			.dependsOn ( turbineDB )
 
 }

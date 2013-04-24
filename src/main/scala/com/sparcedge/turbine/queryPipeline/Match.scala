@@ -1,6 +1,5 @@
 package com.sparcedge.turbine.query
 
-import play.api.libs.json.Json
 import play.api.libs.json.{JsObject,JsNumber,JsString,JsValue,JsArray}
 
 import com.sparcedge.turbine.event.Event
@@ -42,7 +41,7 @@ object Match {
 	}
 }
 
-trait Match {
+abstract class Match extends QueryElement {
 	val segment: String
 	val uniqueId: String
 
@@ -53,7 +52,7 @@ trait Match {
 	def apply(): Boolean = false
 }
 
-trait NumericMatch extends Match {
+abstract class NumericMatch extends Match {
 	val value: Double
 	override def apply(event: Event): Boolean = event.getDouble(segment).map(evaluate(_)).getOrElse(false)
 	override def apply(numeric: Double): Boolean = evaluate(numeric)
@@ -61,7 +60,7 @@ trait NumericMatch extends Match {
 	def evaluate(testVal: Double): Boolean
 }
 
-trait StringMatch extends Match {
+abstract class StringMatch extends Match {
 	val value: String
 	override def apply(event: Event): Boolean = event.getString(segment).map(evaluate(_)).getOrElse(false)
 	override def apply(str: String): Boolean = evaluate(str)
@@ -128,6 +127,7 @@ class LessThanEqualStringMatch(val segment: String, val value: String) extends S
 	val uniqueId = s"LessThanEqualStringMatch.${segment}.${value}"
 }
 
+// TODO: Value Ordering
 class InMatch(val segment: String, val values: Seq[Any]) extends Match {
 	override def apply(event: Event): Boolean = event(segment).map(values.contains(_)).getOrElse(false)
 	override def apply(str: String): Boolean = values.contains(str)
