@@ -7,7 +7,7 @@ Scala code base for the turbine database, which is a low latency time series dat
 Prerequisites
 ------------
 
-* [SBT](https://github.com/harrah/xsbt) -- [install instructions](https://github.com/harrah/xsbt/wiki/Getting-Started-Setup)
+* [SBT](https://github.com/harrah/xsbt) -- [install instructions](http://www.scala-sbt.org/release/docs/Getting-Started/Setup)
 * [Scala IDE (Eclipse)](http://www.scala-ide.org/) -- [install](http://download.scala-ide.org/)
 
 Getting Started
