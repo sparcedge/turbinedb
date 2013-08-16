@@ -2,7 +2,7 @@
 Turbine DB
 =============
 
-Scala code base for the turbine database, which is a low latency time series database.
+Scala code base for the turbine database, which is a low latency time series event driven, columnar database.
 
 Prerequisites
 ------------
