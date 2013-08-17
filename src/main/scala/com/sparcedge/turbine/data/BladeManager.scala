@@ -66,7 +66,9 @@ case class IndexKey (reducer: Reducer, extenders: Iterable[Extend], matches: Ite
 	val uniqueExtendStr = extenders.map(_.uniqueId).toList.mkString(".")
 	val uniqueMatchStr = matches.map(_.uniqueId).toList.sorted.mkString(".")
 	val uniqueGroupStr = groupings.map(_.uniqueId).toList.mkString(".")
-	val id = s"${reducer.reduceType}.${reducer.segment}.${uniqueExtendStr}.${uniqueMatchStr}.${uniqueGroupStr}"
+	val id = removeSpaces(s"${reducer.reduceType}.${reducer.segment}.${uniqueExtendStr}.${uniqueMatchStr}.${uniqueGroupStr}")
+
+	def removeSpaces(str: String): String = str.replaceAll("""\s""","")
 }
 
 trait BladeManagerProvider {
