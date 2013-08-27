@@ -18,7 +18,7 @@ import com.sparcedge.turbine.query.{TurbineQuery,TurbineQueryPackage}
 
 import com.sparcedge.turbine.TurbineManager._
 
-class TurbineHttpServiceActor(val turbineManager: ActorRef) extends Actor with TurbineHttpService with SprayActorLogging {
+class TurbineHttpServiceActor(val turbineManager: ActorRef) extends Actor with TurbineHttpService with ActorLogging {
 	def actorRefFactory = context
 	def receive = runRoute(turbineRoute)
 	val streamingNotifier = context.actorOf(Props[StreamingNotifier], "streaming-notifier")
@@ -26,7 +26,7 @@ class TurbineHttpServiceActor(val turbineManager: ActorRef) extends Actor with T
 
 import StreamingNotifier._
 
-trait TurbineHttpService extends HttpService { this: SprayActorLogging =>
+trait TurbineHttpService extends HttpService { this: ActorLogging =>
 	val turbineManager: ActorRef
 	val streamingNotifier: ActorRef
 

@@ -1,6 +1,6 @@
 package com.sparcedge.turbine.services
 
-import akka.actor.{Actor,ActorRef,Props}
+import akka.actor.{Actor,ActorRef,Props,ActorLogging}
 import scala.collection.mutable
 import scala.util.Random
 import spray.routing.{HttpService, RequestContext}
@@ -24,7 +24,7 @@ object StreamingNotifier {
 
 import StreamingNotifier._
 
-class StreamingNotifier extends Actor with SprayActorLogging {
+class StreamingNotifier extends Actor with ActorLogging {
 
 	val collectionListenerMap = mutable.Map[Collection,mutable.ListBuffer[ActorRef]]()
 
@@ -55,7 +55,7 @@ class StreamingNotifier extends Actor with SprayActorLogging {
 
 }
 
-class EventListener(ctx: RequestContext, matches: Iterable[Match], collection: Collection) extends Actor with SprayActorLogging {
+class EventListener(ctx: RequestContext, matches: Iterable[Match], collection: Collection) extends Actor with ActorLogging {
 
 	val responseStart = HttpResponse(entity = """{"connected":true}""" + "\n")
 	ctx.responder ! ChunkedResponseStart(responseStart)

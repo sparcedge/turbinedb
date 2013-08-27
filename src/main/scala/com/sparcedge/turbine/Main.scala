@@ -29,7 +29,7 @@ object Main extends App {
 	val printTimings = appConfig.getBoolean("com.sparcedge.turbinedb.print-timings")
 	val dataDirectory = appConfig.getString("com.sparcedge.turbinedb.data.directory")
 	val indexResolution = appConfig.getString("com.sparcedge.turbinedb.data.index-resolution")
-	val logger = Logging.getLogger(actorSystem, this);
+	val logger = Logging(actorSystem, "Turbine-Main");
 
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
