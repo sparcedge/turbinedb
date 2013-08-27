@@ -39,8 +39,8 @@ trait TurbineHttpService extends HttpService { this: SprayActorLogging =>
 			}
 		} ~
 		pathPrefix("db" | "events") {
-			pathPrefix(PathElement) { database =>
-				pathPrefix(PathElement) { collection =>
+			pathPrefix(Segment) { database =>
+				pathPrefix(Segment) { collection =>
 					path("") {
 						(get & parameter('q) ) { rawQuery =>
 							respondWithMediaType(`application/json`) { ctx =>
@@ -73,8 +73,8 @@ trait TurbineHttpService extends HttpService { this: SprayActorLogging =>
 				}
 			}
 		} ~
-		pathPrefix("notify" / PathElement) { database =>
-			pathPrefix(PathElement) { collection =>
+		pathPrefix("notify" / Segment) { database =>
+			pathPrefix(Segment) { collection =>
 				path("") {
 					(get & parameter('m) ) { matchStr =>
 						respondAsEventStream { ctx =>

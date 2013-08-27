@@ -4,7 +4,7 @@ import akka.actor.{Actor,ActorRef,Props}
 import scala.collection.mutable
 import scala.util.Random
 import spray.routing.{HttpService, RequestContext}
-import spray.can.server.HttpServer
+import spray.can.Http
 import spray.util._
 import spray.http._
 import MediaTypes._
@@ -47,7 +47,7 @@ class StreamingNotifier extends Actor with SprayActorLogging {
 
 class EventListener(ctx: RequestContext, matches: Iterable[Match], collection: Collection) extends Actor with SprayActorLogging {
 
-	val responseStart = HttpResponse(entity = HttpBody(`application/json`, """{"connected":true}""" + "\n"))
+	val responseStart = HttpResponse(entity = """{"connected":true}""" + "\n")
 	ctx.responder ! ChunkedResponseStart(responseStart)
 
 	def receive = {
@@ -55,8 +55,8 @@ class EventListener(ctx: RequestContext, matches: Iterable[Match], collection: C
 			if(QueryUtil.eventMatchesAllCriteria(event,matches)) {
 				ctx.responder ! MessageChunk(eventStr + "\n")
 			}
-		case HttpServer.Closed(_, reason) =>
-			log.debug("Closing event listener streaming: {}", reason)
+		case c: Http.ConnectionClosed =>
+			log.debug("Closing event listener streaming: {}", c)
 			context.parent ! Unregister(self, collection)
 			context.stop(self)
 		case _ =>

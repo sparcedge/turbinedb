@@ -5,7 +5,7 @@ import com.github.retronym.SbtOneJar
 object BuildSettings {
 	val buildOrganization = "com.sparcedge"
 	val buildVersion      = "0.1"
-	val buildScalaVersion = "2.10.1"
+	val buildScalaVersion = "2.10.2"
 
 	val buildSettings = Defaults.defaultSettings ++ Seq (
 		organization := buildOrganization,
@@ -17,19 +17,20 @@ object BuildSettings {
 object Resolvers {
 	val typesafeRepo = "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/"
 	val sprayRepo = "Spray Repo" at "http://repo.spray.io"
+	val sprayNightlyRepo = "Spray Nightly Repo" at "http://nightlies.spray.io/"
 	val playJsonSnapRepo = "Mandubian repository snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/"
 	val playJsonRelRepo = "Mandubian repository releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/"
 }
 
 object Dependencies {
-	val akkaVersion = "2.1.1"
-	val sprayVersion = "1.1-M7"
+	val akkaVersion = "2.2.0"
+	val sprayVersion = "1.2-20130710"
 
 	val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
 	val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
 	val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % akkaVersion
 	val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
-	val akkaCluster = "com.typesafe.akka" %% "akka-cluster-experimental" % akkaVersion
+	val akkaCluster = "com.typesafe.akka" %% "akka-cluster" % akkaVersion
 
 	val sprayCan = "io.spray" % "spray-can" % sprayVersion
 	val sprayRouting = "io.spray" % "spray-routing" % sprayVersion
@@ -62,14 +63,14 @@ object TurbineDB extends Build {
 		Project ("turbine-db", file("."))
 			.settings ( buildSettings : _* )
 			.settings ( SbtOneJar.oneJarSettings : _* )
-			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo, playJsonRelRepo) )
+			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, sprayNightlyRepo, playJsonSnapRepo, playJsonRelRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature") )
 
 	lazy val turbineBenchmark = 
 		Project ("benchmark", file("benchmark"))
 			.settings ( buildSettings : _* )
-			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, playJsonSnapRepo) )
+			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, sprayNightlyRepo, playJsonSnapRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( libraryDependencies ++= Dependencies.benchmarkDependencies )
 			.settings ( fork in run := true )
