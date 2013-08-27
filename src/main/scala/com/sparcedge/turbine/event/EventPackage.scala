@@ -43,6 +43,13 @@ object IngressEvent {
 			json.as[IngressEvent]
 		}
 	}
+
+	def tryParseMany(eventsJson: String): Try[Iterable[IngressEvent]] = {
+		Try {
+			val json = Json.parse(eventsJson)
+			json.as[Vector[IngressEvent]]
+		}
+	}
 }
 
 case class IngressEvent(timestamp: Long, data: JsObject)
@@ -59,6 +66,10 @@ object EventIngressPackage {
 	def fromBytes(bytes: Array[Byte]): EventIngressPackage = {
 		val json = Json.parse(bytes)
 		json.as[EventIngressPackage]
+	}
+
+	def eventJson(eventPkg: EventIngressPackage): String = {
+		Json.stringify(Json.toJson(eventPkg.event))
 	}
 }
 

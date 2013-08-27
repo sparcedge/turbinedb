@@ -16,6 +16,7 @@ import com.sparcedge.turbine.query.{TurbineQueryPackage,TurbineQuery,QueryHandle
 object TurbineManager {
 	case class QueryDispatchRequest(queryPkg: TurbineQueryPackage, ctx: RequestContext)
 	case class AddEventRequest(eventIngressPkg: EventIngressPackage, ctx: RequestContext)
+	case class AddEventsRequest(eventIngressPkgs: Iterable[EventIngressPackage], ctx: RequestContext)
 	var eventsWrittenListener: Option[ActorRef] = null
 }
 
@@ -58,6 +59,8 @@ class TurbineManager() extends Actor with ActorLogging { this: TurbineManagerPro
 			queryHandlerRouter ! HandleQuery(queryPkg, ctx)
 		case AddEventRequest(eventIngressPkg, ctx) =>
 			journalWriter ! WriteEventToJournal(eventIngressPkg, ctx)
+		case AddEventsRequest(eventIngressPkgs, ctx) =>
+			journalWriter ! WriteEventsToJournal(eventIngressPkgs, ctx)
 		case _ =>
 	}
 }

@@ -12,6 +12,7 @@ import com.sparcedge.turbine.behaviors.BatchBehavior
 
 object JournalWriter {
 	case class WriteEventToJournal(eventIngressPkg: EventIngressPackage, ctx: RequestContext)
+	case class WriteEventsToJournal(eventIngressPkg: Iterable[EventIngressPackage], ctx: RequestContext)
 }
 
 import JournalWriter._
@@ -33,11 +34,22 @@ class JournalWriter(journal: Journal) extends Actor with BatchBehavior with Acto
 	def receive = batchReceive orElse {
 		case WriteEventToJournal(eventIngressPkg, ctx) =>
 			writeEventPackageToJournal(eventIngressPkg, ctx)
+		case WriteEventsToJournal(eventIngressPkgs, ctx) =>
+			writeEventPackagesToJournal(eventIngressPkgs, ctx)
 		case _ =>
 	}
 
+	def writeEventPackagesToJournal(eventPkgs: Iterable[EventIngressPackage], ctx: RequestContext) {
+		eventPkgs foreach { pkg =>
+			val serialized = EventIngressPackage.toBytes(pkg)
+			journal.write(serialized, WriteType.ASYNC)
+			incrementBatchSize()
+		}
+		unacknowledgedContexts += ctx
+	}
+
 	def writeEventPackageToJournal(eventPkg: EventIngressPackage, ctx: RequestContext) {
-		val serialized = EventIngressPackage.toBytes(eventPkg) // TODO: Someone else
+		val serialized = EventIngressPackage.toBytes(eventPkg)
 		journal.write(serialized, WriteType.ASYNC)
 		unacknowledgedContexts += ctx
 		incrementBatchSize()

@@ -1,6 +1,7 @@
 import sbt._
 import Keys._
 import com.github.retronym.SbtOneJar
+import com.typesafe.sbt.SbtAtmos.{ Atmos, atmosSettings }
 
 object BuildSettings {
 	val buildOrganization = "com.sparcedge"
@@ -66,6 +67,8 @@ object TurbineDB extends Build {
 			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, sprayNightlyRepo, playJsonSnapRepo, playJsonRelRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature") )
+			.configs(Atmos)
+  			.settings(atmosSettings: _*)
 
 	lazy val turbineBenchmark = 
 		Project ("benchmark", file("benchmark"))

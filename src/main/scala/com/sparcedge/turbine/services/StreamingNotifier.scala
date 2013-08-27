@@ -16,6 +16,7 @@ import com.sparcedge.turbine.data.QueryUtil
 
 object StreamingNotifier {
 	case class StreamEventPackage(eventIngressPkg: EventIngressPackage, eventStr: String)
+	case class StreamEventPackages(eventIngressPkgs: Iterable[EventIngressPackage])
 	case class StreamEvent(event: Event, eventStr: String)
 	case class NewListener(ctx: RequestContext, collection: Collection, matches: Iterable[Match])
 	case class Unregister(listener: ActorRef, collection: Collection)
@@ -34,6 +35,15 @@ class StreamingNotifier extends Actor with SprayActorLogging {
 		case StreamEventPackage(eiPkg, eventStr) =>
 			val stMsg = StreamEvent(EventPackage.convertIngressEventToEvent(eiPkg.event), eventStr)
 			collectionListenerMap.getOrElseUpdate(eiPkg.collection, mutable.ListBuffer[ActorRef]()).foreach(_ ! stMsg)
+		case StreamEventPackages(eiPkgs) =>
+			if(eiPkgs.size > 0) {
+				val listeners = collectionListenerMap.getOrElseUpdate(eiPkgs.head.collection, mutable.ListBuffer[ActorRef]())
+				eiPkgs.foreach { pkg =>
+					val eventJson = EventIngressPackage.eventJson(pkg)
+					val stMsg = StreamEvent(EventPackage.convertIngressEventToEvent(pkg.event), eventJson)
+					listeners.foreach(_ ! stMsg)
+				}
+			}
 		case Unregister(listener, coll) =>
 			collectionListenerMap(coll) -= listener
 		case _ =>

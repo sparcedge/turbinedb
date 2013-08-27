@@ -38,6 +38,28 @@ trait TurbineHttpService extends HttpService { this: SprayActorLogging =>
 				}
 			}
 		} ~
+		pathPrefix("bulk") {
+			pathPrefix(Segment) { database =>
+				pathPrefix(Segment) { collection =>
+					post {
+						entity(as[String]) { rawEvents =>
+							respondWithMediaType(`application/json`) { ctx =>
+								IngressEvent.tryParseMany(rawEvents) match {
+									case Success(ingressEvents) =>
+										val coll = Collection(database, collection)
+										val eventIngressPkgs = ingressEvents.map(EventIngressPackage(coll, _))
+										turbineManager ! AddEventsRequest(eventIngressPkgs, ctx)
+										streamingNotifier ! StreamEventPackages(eventIngressPkgs)
+									case Failure(err) =>
+										log.error(err, "Failed parsing event from add event request")
+										ctx.complete(HttpResponse(StatusCodes.InternalServerError))
+								}
+							}
+						}
+					}
+				}
+			}
+		} ~
 		pathPrefix("db" | "events") {
 			pathPrefix(Segment) { database =>
 				pathPrefix(Segment) { collection =>
