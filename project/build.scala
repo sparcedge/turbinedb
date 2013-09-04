@@ -24,7 +24,7 @@ object Resolvers {
 }
 
 object Dependencies {
-	val akkaVersion = "2.2.0"
+	val akkaVersion = "2.2.1"
 	val sprayVersion = "1.2-20130822"
 
 	val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion

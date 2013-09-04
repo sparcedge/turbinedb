@@ -60,38 +60,51 @@ trait TurbineHttpService extends HttpService { this: ActorLogging =>
 				}
 			}
 		} ~
-		pathPrefix("db" | "events") {
+		pathPrefix("db") {
 			pathPrefix(Segment) { database =>
 				pathPrefix(Segment) { collection =>
-					path("") {
-						(get & parameter('q) ) { rawQuery =>
-							respondWithMediaType(`application/json`) { ctx =>
-								TurbineQuery.tryParse(rawQuery) match {
-									case Success(query) =>
-										val queryPackage = TurbineQueryPackage(Collection(database, collection), query)
-										turbineManager ! QueryDispatchRequest(queryPackage, ctx)
-									case Failure(err) =>
-										log.error(err, "Failed parsing query from dispatch request")
-										ctx.complete(HttpResponse(StatusCodes.InternalServerError))
-								}
+					(get & parameter('q) ) { rawQuery =>
+						respondWithMediaType(`application/json`) { ctx =>
+							TurbineQuery.tryParse(rawQuery) match {
+								case Success(query) =>
+									val queryPackage = TurbineQueryPackage(Collection(database, collection), query)
+									turbineManager ! QueryDispatchRequest(queryPackage, ctx)
+								case Failure(err) =>
+									log.error(err, "Failed parsing query from dispatch request")
+									ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 							}
-						} ~
-						post {
-							entity(as[String]) { rawEvent =>
-								respondWithMediaType(`application/json`) { ctx =>
-									IngressEvent.tryParse(rawEvent) match {
-										case Success(ingressEvent) =>
-											val eventIngressPkg = EventIngressPackage(Collection(database, collection), ingressEvent)
-											turbineManager ! AddEventRequest(eventIngressPkg, ctx)
-											streamingNotifier ! StreamEventPackage(eventIngressPkg, rawEvent)
-										case Failure(err) =>
-											log.error(err, "Failed parsing event from add event request")
-											ctx.complete(HttpResponse(StatusCodes.InternalServerError))
-									}
+						}
+					} ~
+					get {
+						respondWithMediaType(`application/json`) { ctx =>
+							turbineManager ! DescribeCollectionRequest(Collection(database, collection), ctx)
+						}
+					} ~
+					post {
+						entity(as[String]) { rawEvent =>
+							respondWithMediaType(`application/json`) { ctx =>
+								IngressEvent.tryParse(rawEvent) match {
+									case Success(ingressEvent) =>
+										val eventIngressPkg = EventIngressPackage(Collection(database, collection), ingressEvent)
+										turbineManager ! AddEventRequest(eventIngressPkg, ctx)
+										streamingNotifier ! StreamEventPackage(eventIngressPkg, rawEvent)
+									case Failure(err) =>
+										log.error(err, "Failed parsing event from add event request")
+										ctx.complete(HttpResponse(StatusCodes.InternalServerError))
 								}
 							}
 						}
 					}
+				} ~
+				get {
+					respondWithMediaType(`application/json`) { ctx =>
+						turbineManager ! DescribeDatabaseRequest(database, ctx)
+					}
+				}
+			} ~
+			get {
+				respondWithMediaType(`application/json`) { ctx =>
+					turbineManager ! DescribeInstanceRequest(ctx)
 				}
 			}
 		} ~

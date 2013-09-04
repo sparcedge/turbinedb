@@ -5,7 +5,6 @@ import scala.util.{Try,Success,Failure}
 import akka.actor.{Actor,Props,ActorSystem,ActorRef,ActorLogging}
 import akka.routing.FromConfig
 import spray.routing.RequestContext
-import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 import journal.io.api.Journal
 
 import com.sparcedge.turbine.event.{EventIngressPackage,IngressEvent}
@@ -17,6 +16,9 @@ object TurbineManager {
 	case class QueryDispatchRequest(queryPkg: TurbineQueryPackage, ctx: RequestContext)
 	case class AddEventRequest(eventIngressPkg: EventIngressPackage, ctx: RequestContext)
 	case class AddEventsRequest(eventIngressPkgs: Iterable[EventIngressPackage], ctx: RequestContext)
+	case class DescribeInstanceRequest(ctx: RequestContext)
+	case class DescribeDatabaseRequest(database: String, ctx: RequestContext)
+	case class DescribeCollectionRequest(collection: Collection, ctx: RequestContext)
 	var eventsWrittenListener: Option[ActorRef] = null
 }
 
@@ -24,6 +26,7 @@ import TurbineManager._
 import QueryHandler._
 import BladeManager._
 import JournalWriter._
+import MetaManager._
 
 class TurbineManager() extends Actor with ActorLogging { this: TurbineManagerProvider =>
 
@@ -52,6 +55,10 @@ class TurbineManager() extends Actor with ActorLogging { this: TurbineManagerPro
 	)
 	log.info("Created JournalWriter")
 
+	val metaManager = context.actorOf (
+		Props(newMetaManager(bladeRepositoryManager)), "MetaManager"
+	)
+
 	eventsWrittenListener = Some(journalReader)
 
 	def receive = {
@@ -61,6 +68,15 @@ class TurbineManager() extends Actor with ActorLogging { this: TurbineManagerPro
 			journalWriter ! WriteEventToJournal(eventIngressPkg, ctx)
 		case AddEventsRequest(eventIngressPkgs, ctx) =>
 			journalWriter ! WriteEventsToJournal(eventIngressPkgs, ctx)
+		case DescribeInstanceRequest(ctx) =>
+			println(s"Describe Instance")
+			metaManager ! DescribeDatabases(ctx)
+		case DescribeDatabaseRequest(database, ctx) =>
+			println(s"Describe Database: ${database}")
+			metaManager ! DescribeCollections(database, ctx)
+		case DescribeCollectionRequest(collection, ctx) =>
+			println(s"Describe Collection: ${collection}")
+			metaManager ! DescribeSegments(collection, ctx)
 		case _ =>
 	}
 }
@@ -72,6 +88,7 @@ trait TurbineManagerProvider { this: Actor with ActorLogging =>
 	def newQueryHandler(bladeManRepo: ActorRef): Actor = new QueryHandler(bladeManRepo)
 	def newJournalReader(journal: Journal, writeHandlerRouter: ActorRef): Actor = new JournalReader(journal, writeHandlerRouter)
 	def newJournalWriter(journal: Journal): Actor = new JournalWriter(journal)
+	def newMetaManager(bladeManRepo: ActorRef): Actor = new MetaManager(bladeManRepo)
 
 	def initializeJournal(journal: Journal): Journal = {
 		val journalDir = context.system.settings.config.getString("com.sparcedge.turbinedb.journal.directory")

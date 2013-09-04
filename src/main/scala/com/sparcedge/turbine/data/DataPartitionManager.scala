@@ -13,6 +13,8 @@ import com.sparcedge.turbine.{TurbineManager,Blade}
 object DataPartitionManager {
 	case class WriteEvent(id: String, event: Event)
 	case class PopulateIndexesRequest(indexes: Iterable[Index])
+	case class PartitionSegmentsRequest()
+	case class PartitionSegmentsResponse(segments: Iterable[String])
 }
 
 import AggregateIndex._
@@ -37,6 +39,8 @@ class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with Ba
 					indexes.foreach(index => index.indexManager ! PopulatedIndex(index))
 				case Failure(err) => // TODO: Handle Population Failure
 			}
+		case PartitionSegmentsRequest() =>
+			sender ! PartitionSegmentsResponse(partition.dataSegments.filterNot(s => s == "ts" || s == "its"))
 		case _ =>
 	}
 

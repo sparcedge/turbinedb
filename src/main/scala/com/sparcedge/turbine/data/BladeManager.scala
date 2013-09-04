@@ -1,8 +1,12 @@
 package com.sparcedge.turbine.data
 
 import akka.actor.{Actor,ActorRef,Props,ActorLogging}
+import akka.pattern.{ask,pipe}
+import akka.util.Timeout
 import scala.collection.mutable
 import scala.util.Random
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 import com.sparcedge.turbine.query._
 import com.sparcedge.turbine.event.Event
@@ -12,6 +16,8 @@ object BladeManager {
 	case class IndexesRequest(query: TurbineQuery)
 	case class IndexesResponse(indexes: Iterable[ActorRef])
 	case class AddEvent(id: String, event: Event)
+	case class SegmentsRequest()
+	case class SegmentsResponse(segments: Iterable[String])
 }
 
 import BladeManager._
@@ -19,6 +25,9 @@ import DataPartitionManager._
 import AggregateIndex._
 
 class BladeManager(blade: Blade) extends Actor with ActorLogging { this: BladeManagerProvider =>
+
+	implicit val timeout = Timeout(240.seconds)
+	implicit val ec: ExecutionContext = context.dispatcher
 
 	val partitionManager = context.actorOf (
 		Props(newDataPartitionManager(blade)).withDispatcher("com.sparcedge.turbinedb.data-partition-dispatcher"), 
@@ -40,8 +49,13 @@ class BladeManager(blade: Blade) extends Actor with ActorLogging { this: BladeMa
 			sender ! IndexesResponse(indexes)
 		case AddEvent(id, event) =>
 			partitionManager ! WriteEvent(id, event)
-			// TODO: Efficiency
 			indexMap.values.foreach(_ ! UpdateIndex(event))
+		case SegmentsRequest() =>
+			val respondTo = sender
+			(partitionManager ? PartitionSegmentsRequest())
+				.mapTo[PartitionSegmentsResponse]
+				.map(res => SegmentsResponse(res.segments))
+				.pipeTo(respondTo)
 		case _ =>
 	}
 

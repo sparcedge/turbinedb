@@ -6,13 +6,18 @@ import com.sparcedge.turbine.data.{BladeManager,BladeManagerProvider}
 import com.sparcedge.turbine.util.{WrappedTreeMap,DiskUtil}
 
 object BladeManagerRepository {
-	case class BladeManagerRangeRequest(coll: Collection, sPeriodOpt: Option[String], ePeriodOpt: Option[String])
+	case class BladeManagerRangeRequest(coll: Collection, sPeriodOpt: Option[String] = None, ePeriodOpt: Option[String] = None)
 	case class BladeManagerRequest(blade: Blade)
 	case class BladeManagerGetOrCreateRequest(blade: Blade)
 	
 	case class BladeManagerRangeResponse(managers: Iterable[(Blade,ActorRef)])
 	case class BladeManagerResponse(manager: Option[ActorRef])
 	case class BladeManagerGetOrCreateResponse(manager: ActorRef)
+
+	case class DatabasesRequest()
+	case class DatabasesResponse(databases: Iterable[String])
+	case class CollectionsRequest(database: String)
+	case class CollectionsResponse(collections: Iterable[Collection])
 }
 
 import BladeManagerRepository._
@@ -29,7 +34,12 @@ class BladeManagerRepository() extends Actor with ActorLogging { this: BladeMana
 			val (newBlade,manager) = bladeManagerMap.getOrElseUpdate(blade.key, (blade -> createManagerForBlade(blade)))
 			sender ! BladeManagerGetOrCreateResponse(manager)
 		case BladeManagerRangeRequest(coll, sPeriodOpt, ePeriodOpt) =>
+			println("Blade Manager Range Request!")
 			sender ! BladeManagerRangeResponse(getBladeManagersInRange(coll, sPeriodOpt, ePeriodOpt))
+		case DatabasesRequest() =>
+			sender ! DatabasesResponse(retrieveDatabases())
+		case CollectionsRequest(database: String) =>
+			sender ! CollectionsResponse(retrieveCollections(database))
 		case _ =>
 	}
 
@@ -64,6 +74,14 @@ class BladeManagerRepository() extends Actor with ActorLogging { this: BladeMana
 		blades foreach { blade =>
 			bladeManagerMap(blade.key) = (blade -> createManagerForBlade(blade))
 		}
+	}
+
+	def retrieveDatabases(): Iterable[String] = {
+		bladeManagerMap.values.map(_._1.collection.database).toList.distinct
+	}
+
+	def retrieveCollections(database: String): Iterable[Collection] = {
+		bladeManagerMap.values.map(_._1.collection).filter(_.database == database).toList.distinct
 	}
 
 	def createManagerForBlade(blade: Blade): ActorRef = {
