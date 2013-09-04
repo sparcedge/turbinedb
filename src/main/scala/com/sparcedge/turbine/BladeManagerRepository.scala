@@ -34,7 +34,6 @@ class BladeManagerRepository() extends Actor with ActorLogging { this: BladeMana
 			val (newBlade,manager) = bladeManagerMap.getOrElseUpdate(blade.key, (blade -> createManagerForBlade(blade)))
 			sender ! BladeManagerGetOrCreateResponse(manager)
 		case BladeManagerRangeRequest(coll, sPeriodOpt, ePeriodOpt) =>
-			println("Blade Manager Range Request!")
 			sender ! BladeManagerRangeResponse(getBladeManagersInRange(coll, sPeriodOpt, ePeriodOpt))
 		case DatabasesRequest() =>
 			sender ! DatabasesResponse(retrieveDatabases())

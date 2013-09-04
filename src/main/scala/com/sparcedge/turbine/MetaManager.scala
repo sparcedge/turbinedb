@@ -31,10 +31,8 @@ class MetaManager(bladeManagerRepository: ActorRef) extends Actor with ActorLogg
         case DescribeDatabases(ctx: RequestContext) =>
             retrieveAndRespondWithDatabases(ctx)
         case DescribeCollections(database: String, ctx: RequestContext) =>
-            println(s"Describing Collections for ${database}")
             retrieveAndRespondWithCollections(database, ctx)
         case DescribeSegments(collection: Collection, ctx: RequestContext) =>
-            println(s"Describing Segments for ${collection}")
             retrieveAndRespondWithSegments(collection, ctx)
         case _ =>
     }
