@@ -1,6 +1,7 @@
 package com.sparcedge.turbine.query
 
 import play.api.libs.json.{JsObject,JsNumber,JsString,JsValue,JsArray}
+import scala.util.{Try,Success,Failure}
 
 import com.sparcedge.turbine.event.Event
 
@@ -26,6 +27,7 @@ object Match {
 			case ("lt", JsString(str)) => new LessThanStringMatch(seg, str)
 			case ("lte", JsNumber(num)) => new LessThanEqualNumericMatch(seg, num.toDouble)
 			case ("lte", JsString(str)) => new LessThanEqualStringMatch(seg, str)
+			case ("re", JsString(str)) => new RegexMatch(seg, str)
 			case ("in", JsArray(arr)) => new InMatch(seg, arr.map(unbox(_)))
 			case ("nin", JsArray(arr)) => new InMatch(seg, arr.map(unbox(_)))
 			case _ => throw new Exception("Invalid Match Type")
@@ -125,6 +127,17 @@ class LessThanEqualNumericMatch(val segment: String, val value: Double) extends 
 class LessThanEqualStringMatch(val segment: String, val value: String) extends StringMatch {
 	def evaluate(testVal: String) = testVal <= value
 	val uniqueId = s"LessThanEqualStringMatch.${segment}.${value}"
+}
+
+class RegexMatch(val segment: String, val regex: String) extends Match {
+	if(!validRegex(regex)) 
+		throw new Exception("Invalid Regex Value")
+
+	override def apply(event: Event): Boolean = event.getString(segment).map(matches).getOrElse(false)
+	override def apply(str: String): Boolean = matches(str)
+	def matches(str: String): Boolean = str.matches(regex)
+	def validRegex(str: String): Boolean = Try(str.r).map(r => true).getOrElse(false)
+	val uniqueId = s"Regex.${segment}.${regex}"
 }
 
 // TODO: Value Ordering
