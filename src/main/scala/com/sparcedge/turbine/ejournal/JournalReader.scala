@@ -15,6 +15,7 @@ object JournalReader {
 	case class EventWrittenToDisk(id: String)
 	case class EventsWrittenToDisk(ids: Iterable[String])
 	case object ProcessJournalEvents
+	case object CompactJournal
 }
 
 import JournalReader._
@@ -24,9 +25,10 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 
 	val eventLocations = mutable.Map[String,Location]()
 	val processJournalDelay = context.system.settings.config.getInt("com.sparcedge.turbinedb.journal.process-delay")
+	val compactJournalDelay = context.system.settings.config.getInt("com.sparcedge.turbinedb.journal.compact-delay")
+	context.system.scheduler.scheduleOnce(100.milliseconds, self, CompactJournal) // Compact Journal After 100ms
 	var lastLocation: Option[Location] = None
 	scheduleProcessJournalMessage()
-
 
 	def receive = {
 		case EventWrittenToDisk(id) =>
@@ -38,7 +40,16 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 		case ProcessJournalEvents =>
 			log.debug("Processing Journal Events")
 			processJournalEvents()
+		case CompactJournal =>
+			compactJournal()
 		case _ =>
+	}
+
+	def compactJournal() {
+		println("Compacting Journal!")
+		journal.compact()
+		println("Finished Compacting Journal!")
+		scheduleCompactJournalMessage()
 	}
 
 	def removeEventFromJournal(id: String) {
@@ -67,6 +78,10 @@ class JournalReader(journal: Journal, writeHandlerRouter: ActorRef) extends Acto
 
 	def scheduleProcessJournalMessage() {
 		context.system.scheduler.scheduleOnce(processJournalDelay.milliseconds, self, ProcessJournalEvents)
+	}
+
+	def scheduleCompactJournalMessage() {
+		context.system.scheduler.scheduleOnce(compactJournalDelay.milliseconds, self, CompactJournal)
 	}
 
 	def createLocationKey(loc: Location): String = {

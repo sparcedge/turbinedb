@@ -11,7 +11,7 @@ import com.sparcedge.turbine.Blade
 object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
-	val GROUPING_LENGTH = 7 // 100000✈
+	val GROUPING_LENGTH = 6 // 100000
 
 	def eventMatchesAllCriteria(event: Event, matches: Iterable[Match]): Boolean = {
 		matches foreach { matcher =>
@@ -23,10 +23,12 @@ object QueryUtil {
 	}
 
 	def createGroupString(event: Event, groupings: Iterable[Grouping]): String = {
-		if(groupings.size > 0) {
-			val builder = new StringBuilder
-			builder.append(groupings.head.evaluate(event))
-			groupings.tail foreach { grouping =>
+		val builder = new StringBuilder
+		builder.append(groupings.head.evaluate(event))
+		val otherGroupings = groupings.tail
+		if(otherGroupings.size > 0) {
+			builder.append(otherGroupings.head.evaluate(event))
+			otherGroupings.tail foreach { grouping =>
 				builder.append(GROUP_SEPARATOR).append(grouping.evaluate(event))
 			}
 			builder.toString
@@ -37,9 +39,10 @@ object QueryUtil {
 
 	def createGroupString(grpValues: Array[String]): String = {
 		val builder = new StringBuilder
-		if(grpValues.length > 0) {
-			builder.append(grpValues(0))
-			var cnt = 1
+		builder.append(grpValues(0))
+		if(grpValues.length > 1) {
+			builder.append(grpValues(1))
+			var cnt = 2
 			while(cnt < grpValues.length) {
 				builder.append(GROUP_SEPARATOR).append(grpValues(cnt))
 				cnt += 1

@@ -40,7 +40,7 @@ object Dependencies {
 	val jodaTime = "joda-time" % "joda-time" % "2.1"
 	val jodaConvert = "org.joda" % "joda-convert" % "1.2"
 	val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
-	val journalio = "com.github.sbtourist" % "journalio" % "1.3"
+	val journalio = "com.github.sbtourist" % "journalio" % "1.4"
 
 	val scalatest = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
 	val googleCaliper = "com.google.caliper" % "caliper" % "0.5-rc1"
