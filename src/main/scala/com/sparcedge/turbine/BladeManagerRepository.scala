@@ -76,11 +76,11 @@ class BladeManagerRepository() extends Actor with ActorLogging { this: BladeMana
 	}
 
 	def retrieveDatabases(): Iterable[String] = {
-		bladeManagerMap.values.map(_._1.collection.database).toList.distinct
+		bladeManagerMap.values.map(_._1.collection.database).toVector.distinct
 	}
 
 	def retrieveCollections(database: String): Iterable[Collection] = {
-		bladeManagerMap.values.map(_._1.collection).filter(_.database == database).toList.distinct
+		bladeManagerMap.values.map(_._1.collection).filter(_.database == database).toVector.distinct
 	}
 
 	def createManagerForBlade(blade: Blade): ActorRef = {

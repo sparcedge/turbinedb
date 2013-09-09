@@ -11,29 +11,23 @@ import com.sparcedge.turbine.Blade
 object QueryUtil {
 	val GROUP_SEPARATOR = "✈"
 	val GROUP_SEPARATOR_CHAR = '✈'
-	val GROUPING_LENGTH = 6 // 100000
-	// TODO: Not good!
-	var DATA_GROUPING = new IndexGrouping("ihour")
+	val GROUPING_LENGTH = 7 // 100000✈
 
 	def eventMatchesAllCriteria(event: Event, matches: Iterable[Match]): Boolean = {
 		matches foreach { matcher =>
-			if(!matcher(event)) {
+			if(!matcher.evaluate(event)) {
 				return false
 			}
 		}
 		true
 	}
 
-	def createDataGroupString(event: Event, blade: Blade, groupings: Iterable[Grouping]): String = {
-		new StringBuilder(DATA_GROUPING(event.ts, blade.periodStartMS)).append(createGroupString(event,groupings)).toString
-	}
-
 	def createGroupString(event: Event, groupings: Iterable[Grouping]): String = {
 		if(groupings.size > 0) {
 			val builder = new StringBuilder
-			builder.append(groupings.head(event))
+			builder.append(groupings.head.evaluate(event))
 			groupings.tail foreach { grouping =>
-				builder.append(GROUP_SEPARATOR).append(grouping(event))
+				builder.append(GROUP_SEPARATOR).append(grouping.evaluate(event))
 			}
 			builder.toString
 		} else {
@@ -41,9 +35,8 @@ object QueryUtil {
 		}
 	}
 
-	def createGroupString(dataGrpValue: String, grpValues: Array[String]): String = {
+	def createGroupString(grpValues: Array[String]): String = {
 		val builder = new StringBuilder
-		builder.append(dataGrpValue)
 		if(grpValues.length > 0) {
 			builder.append(grpValues(0))
 			var cnt = 1
@@ -56,7 +49,8 @@ object QueryUtil {
 	}
 
 	def extendEvent(event: Event, extenders: Iterable[Extend]): Event = {
-		val extendResults = extenders.flatMap(_.evaluate(event))
+		val extendResults = extenders.filter(_.satisfied(event)).map(e => (e.out -> e.evaluate(event)))
+
 		if(extendResults.size > 0) {
 			var newDblValues = event.dblValues
 			extendResults foreach { res =>

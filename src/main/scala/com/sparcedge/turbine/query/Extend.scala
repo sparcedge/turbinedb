@@ -1,128 +1,233 @@
 package com.sparcedge.turbine.query
 
 import play.api.libs.json.{JsObject,JsString,JsValue,JsArray}
+import com.sparcedge.turbine.data.SegmentValueHolder
 import com.sparcedge.turbine.event.Event
 
 object Extend {
-	def apply(jsObj: JsObject): Extend = {
-		jsObj.fields.head match {
-			case (out: String, JsArray(extArr)) => createExtend(out, extArr)
-			case _ => throw new Exception("Invalid Extend Structure")
-		}
-	}
+    def apply(jsObj: JsObject): Extend = {
+        jsObj.fields.head match {
+            case (out: String, JsArray(extArr)) => createExtend(out, extArr)
+            case _ => throw new Exception("Invalid Extend Structure")
+        }
+    }
 
-	def createExtend(out: String, extArray: Seq[JsValue]): Extend = {
-		val segmentIndexMap = extractSegments(extArray).zipWithIndex.toMap
-		val rootElement = createExtendElement(extArray, segmentIndexMap)
-		new Extend(out, rootElement, segmentIndexMap)
-	}
+    def createExtend(out: String, extArray: Seq[JsValue]): Extend = {
+        val rootElement = createExtendElement(extArray)
+        new Extend(out, rootElement)
+    }
 
-	def createExtendElement(extArray: Seq[JsValue], segmentIndexMap: Map[String,Int]): ExtendElement = {
-		(extArray.head, extArray.tail.map(createExtendElement(_, segmentIndexMap))) match {
-			case (JsString("add"), elements) => AddExtendElement(elements.toArray)
-			case (JsString("mul"), elements) => MultiplyExtendElement(elements.toArray)
-			case (JsString("sub"), elements) if elements.size == 2 => SubtractExtendElement(elements(0), elements(1))
-			case (JsString("div"), elements) if elements.size == 2 => DivideExtendElement(elements(0), elements(1))
-			case _ => throw new Exception("Invalid Extend Query Element")
-		}
-	}
+    def createExtendElement(extArray: Seq[JsValue]): ExtendElement = {
+        (extArray.head, extArray.tail.map(createExtendElement(_))) match {
+            case (JsString("add"), elements) => AddExtendElement(elements.toArray)
+            case (JsString("mul"), elements) => MultiplyExtendElement(elements.toArray)
+            case (JsString("sub"), elements) if elements.size == 2 => SubtractExtendElement(elements(0), elements(1))
+            case (JsString("div"), elements) if elements.size == 2 => DivideExtendElement(elements(0), elements(1))
+            case _ => throw new Exception("Invalid Extend Query Element")
+        }
+    }
 
-	def createExtendElement(extValue: JsValue, segmentIndexMap: Map[String,Int]): ExtendElement = {
-		extValue match {
-			case JsString(segment) => ValueExtendElement(segmentIndexMap(segment), segment)
-			case JsArray(array) => createExtendElement(array, segmentIndexMap)
-			case _ => throw new Exception("Invalid Extend Query Element")
-		}
-	}
-
-	def extractSegments(extArray: Seq[JsValue]): Set[String] = {
-		var segments = Set[String]()
-		extArray.foreach { value =>
-			value match {
-				case JsString(seg) => segments += seg
-				case JsArray(arr) => segments ++= extractSegments(arr)
-				case _ => throw new Exception("Invalid Extend Query Element")
-			}
-		}
-		segments -- List("add","sub","mul","div")
-	}
+    def createExtendElement(extValue: JsValue): ExtendElement = {
+        extValue match {
+            case JsString(segment) => ValueExtendElement(segment)
+            case JsArray(array) => createExtendElement(array)
+            case _ => throw new Exception("Invalid Extend Query Element")
+        }
+    }
 }
 
-class Extend(val out: String, val rootElement: ExtendElement, val segmentIndexMap: Map[String,Int]) {
+class Extend(val out: String, val rootElement: ExtendElement) {
 
-	val segments = segmentIndexMap.keys
+    val extendPlaceholder = SegmentValueHolder(out)
 
-	def evaluate(valArr: Array[Double]): Double = {
-		rootElement.evaluate(valArr)
-	}
+    def evaluate() = {
+        extendPlaceholder(rootElement.evaluate())
+    }
 
-	def uniqueId = rootElement.uniqueId
+    def evaluate(event: Event): Double = {
+        rootElement.evaluate(event)
+    }
 
-	def evaluate(event: Event): Option[(String,Double)] = {
-		tryCreateValArrayFromEvent(event).map(out -> rootElement.evaluate(_))
-	}
+    def apply(segmentPlaceholder: SegmentValueHolder) {
+        rootElement(segmentPlaceholder)
+    }
 
-	private def tryCreateValArrayFromEvent(event: Event): Option[Array[Double]] = {
-		val arr = new Array[Double](segments.size)
-		var containsAll = true
+    def satisfied(): Boolean = {
+        rootElement.satisfied()
+    }
 
-		segmentIndexMap foreach { case (seg,idx) =>
-			val value = event.getDoubleUnsafe(seg)
-			if (value != null) arr(idx) = value else containsAll = false
-		}
+    def satisfied(e: Event): Boolean = {
+        rootElement.satisfied(e)
+    }
 
-		if (containsAll) Some(arr) else None
-	}
+    def copy(): Extend = {
+        new Extend(out, rootElement.copy())
+    }
+
+    def segments(): Iterable[String] = {
+        rootElement.segments
+    }
+
+    def uniqueId = rootElement.uniqueId
 }
 
+// TODO: Define in/out data types (handle more than just numeric)
 trait ExtendElement {
-	def evaluate(valArr: Array[Double]): Double
-	def uniqueId: String
+    def apply(segmentPlaceHolder: SegmentValueHolder)
+    def evaluate(): Double
+    def evaluate(e: Event): Double
+    def satisfied(): Boolean
+    def satisfied(e: Event): Boolean
+    def copy(): ExtendElement
+    def segments(): Iterable[String]
+    def uniqueId: String
 }
 
-case class ValueExtendElement(idx: Int, segment: String) extends ExtendElement {
-	def evaluate(valArr: Array[Double]): Double = valArr(idx)
-	val uniqueId = segment
+case class ValueExtendElement(segment: String) extends ExtendElement {
+    var segmentPlaceholder = SegmentValueHolder(segment)
+    def evaluate(): Double = segmentPlaceholder.getDouble
+    def evaluate(e: Event): Double = e.getDoubleUnsafe(segment)
+    def satisfied(): Boolean = segmentPlaceholder.isDouble()
+    def satisfied(e: Event): Boolean = e.containsDouble(segment)
+    val segments = Vector(segment)
+    val uniqueId = segment
+
+    def apply(placeholder: SegmentValueHolder) { 
+        if(placeholder.segment == segment) {
+            segmentPlaceholder = placeholder 
+        }
+    }
+
+    def copy(): ExtendElement = ValueExtendElement(segment)
 }
 
-case class MultiplyExtendElement(elems: Array[ExtendElement]) extends ExtendElement {
-	def evaluate(valArr: Array[Double]): Double = {
-		var product = elems(0).evaluate(valArr)
-		var cnt = 1
-		while(cnt < elems.size) {
-			product *= elems(cnt).evaluate(valArr)
-			cnt += 1
-		}
-		product
-	}
+abstract class VarArgFunctionExtendElement(elems: Array[ExtendElement]) extends ExtendElement {
+    def satisfied(): Boolean = {
+        var i = 0
+        var satisfied = true
+        while(i < elems.length && satisfied) {
+            satisfied = elems(i).satisfied()
+            i += 1
+        }
+        satisfied
+    }
 
-	val uniqueId = s"""mul.${elems.map(_.uniqueId).mkString(".")}"""
+    def satisfied(e: Event): Boolean = {
+        var i = 0
+        var satisfied = true
+        while(i < elems.length && satisfied) {
+            satisfied = elems(i).satisfied(e)
+            i += 1
+        }
+        satisfied
+    }
+
+    def segments(): Iterable[String] = elems.foldLeft(Vector[String]())(_ ++ _.segments)
+
+    def apply(segmentPlaceholder: SegmentValueHolder) {
+        var i = 0
+        while(i < elems.length && satisfied) {
+            elems(i)(segmentPlaceholder)
+            i += 1
+        }
+    }
 }
 
-case class DivideExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends ExtendElement {
-	def evaluate(valArr: Array[Double]): Double = {
-		val value2 = elem2.evaluate(valArr)
-		if(value2 == 0) 0 else elem1.evaluate(valArr) / value2
-	}
-	val uniqueId = s"""div.${elem1.uniqueId}.${elem2.uniqueId}"""
+abstract class TwoArgFunctionExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends ExtendElement {
+    def satisfied(): Boolean = {
+        elem1.satisfied && elem2.satisfied
+    }
+
+    def satisfied(e: Event): Boolean = {
+        elem1.satisfied(e) && elem2.satisfied(e)
+    }
+
+    def segments(): Iterable[String] = elem1.segments ++ elem2.segments
+
+    def apply(segmentPlaceholder: SegmentValueHolder) {
+        elem1(segmentPlaceholder)
+        elem2(segmentPlaceholder)
+    }
 }
 
-case class AddExtendElement(elems: Array[ExtendElement]) extends ExtendElement {
-	def evaluate(valArr: Array[Double]): Double = {
-		var sum = elems(0).evaluate(valArr)
-		var cnt = 1
-		while(cnt < elems.size) {
-			sum += elems(cnt).evaluate(valArr)
-			cnt += 1
-		}
-		sum
-	}
-	val uniqueId = s"""add.${elems.map(_.uniqueId).mkString(".")}"""
+case class MultiplyExtendElement(elems: Array[ExtendElement]) extends VarArgFunctionExtendElement(elems) {
+    def evaluate(): Double = {
+        var product = elems(0).evaluate()
+        var cnt = 1
+        while(cnt < elems.size) {
+            product *= elems(cnt).evaluate()
+            cnt += 1
+        }
+        product
+    }
+
+    def evaluate(e: Event): Double = {
+        var product = elems(0).evaluate(e)
+        var cnt = 1
+        while(cnt < elems.size) {
+            product *= elems(cnt).evaluate(e)
+            cnt += 1
+        }
+        product
+    }
+
+    def copy(): ExtendElement = MultiplyExtendElement(elems.map(_.copy()))
+
+    val uniqueId = s"""mul.${elems.map(_.uniqueId).mkString(".")}"""
 }
 
-case class SubtractExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends ExtendElement {
-	def evaluate(valArr: Array[Double]): Double = {
-		elem1.evaluate(valArr) - elem2.evaluate(valArr)
-	}
-	val uniqueId = s"""sub.${elem1.uniqueId}.${elem2.uniqueId}"""
+case class DivideExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends TwoArgFunctionExtendElement(elem1, elem2) {
+    def evaluate(): Double = {
+        val value2 = elem2.evaluate()
+        if(value2 == 0) 0 else elem1.evaluate() / value2
+    }
+
+    def evaluate(e: Event): Double = {
+        val value2 = elem2.evaluate(e)
+        if(value2 == 0) 0 else elem1.evaluate(e) / value2
+    }
+
+    def copy(): ExtendElement = DivideExtendElement(elem1.copy(), elem2.copy())
+
+    val uniqueId = s"""div.${elem1.uniqueId}.${elem2.uniqueId}"""
+}
+
+case class AddExtendElement(elems: Array[ExtendElement]) extends VarArgFunctionExtendElement(elems) {
+    def evaluate(): Double = {
+        var sum = elems(0).evaluate()
+        var cnt = 1
+        while(cnt < elems.size) {
+            sum += elems(cnt).evaluate()
+            cnt += 1
+        }
+        sum
+    }
+
+    def evaluate(e: Event): Double = {
+        var sum = elems(0).evaluate(e)
+        var cnt = 1
+        while(cnt < elems.size) {
+            sum += elems(cnt).evaluate(e)
+            cnt += 1
+        }
+        sum
+    }
+
+    def copy(): ExtendElement = AddExtendElement(elems.map(_.copy()))
+
+    val uniqueId = s"""add.${elems.map(_.uniqueId).mkString(".")}"""
+}
+
+case class SubtractExtendElement(elem1: ExtendElement, elem2: ExtendElement) extends TwoArgFunctionExtendElement(elem1, elem2) {
+    def evaluate(): Double = {
+        elem1.evaluate() - elem2.evaluate()
+    }
+
+    def evaluate(e: Event): Double = {
+        elem1.evaluate(e) - elem2.evaluate(e)
+    }
+
+    def copy(): ExtendElement = SubtractExtendElement(elem1.copy(), elem2.copy())
+
+    val uniqueId = s"""sub.${elem1.uniqueId}.${elem2.uniqueId}"""
 }

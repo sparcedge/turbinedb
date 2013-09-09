@@ -46,7 +46,7 @@ object DiskUtil {
 		if(segments.contains("ts")) {
 			segments
 		} else {
-			"ts" :: segments.toList
+			"ts" +: segments.toVector
 		}
 	}
 

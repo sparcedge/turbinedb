@@ -19,9 +19,9 @@ object TurbineQuery {
 	def apply(parseQuery: TurbineQueryParse): TurbineQuery = {
 		val start = parseQuery.start
 		val end = parseQuery.end
-		val extenders = parseQuery.extend map { jobjs => jobjs map { jobj => Extend(jobj) } } getOrElse (List[Extend]())
-		val matches = parseQuery.`match` map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (List[Match]())
-		val groupings = parseQuery.group map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (List[Grouping]())
+		val extenders = parseQuery.extend map { jobjs => jobjs map { jobj => Extend(jobj) } } getOrElse (Vector[Extend]())
+		val matches = parseQuery.`match` map { jobjs => jobjs map { jobj => Match(jobj) } } getOrElse (Vector[Match]())
+		val groupings = parseQuery.group map { jobjs => jobjs map { jobj => Grouping(jobj) } } getOrElse (Vector[Grouping]())
 		val reducers = parseQuery.reduce.map(ReducerPackage(_))
 		new TurbineQuery(start, end, extenders, matches, groupings, reducers)
 	}
@@ -36,7 +36,7 @@ object TurbineQuery {
 	def tryParseMatches(matchStr: String): Try[Iterable[Match]] = {
 		Try {
 			val json = Json.parse(matchStr)
-			json.as[List[JsObject]].map(Match(_))
+			json.as[Vector[JsObject]].map(Match(_))
 		}
 	}
 }
@@ -44,19 +44,19 @@ object TurbineQuery {
 case class TurbineQueryParse (
 	start: Option[Long],
 	end: Option[Long],
-	extend: Option[List[JsObject]],
-	`match`: Option[List[JsObject]],
-	group: Option[List[JsObject]],
-	reduce: List[JsObject]
+	extend: Option[Vector[JsObject]],
+	`match`: Option[Vector[JsObject]],
+	group: Option[Vector[JsObject]],
+	reduce: Vector[JsObject]
 )
 
 class TurbineQuery (
 	val start: Option[Long] = None,
 	val end: Option[Long] = None,
-	val extenders: List[Extend] = List[Extend](),
-	val matches: List[Match] = List[Match](),
-	val groupings: List[Grouping] = List[Grouping](),
-	val reducers: List[ReducerPackage] = List[ReducerPackage]()
+	val extenders: Vector[Extend] = Vector[Extend](),
+	val matches: Vector[Match] = Vector[Match](),
+	val groupings: Vector[Grouping] = Vector[Grouping](),
+	val reducers: Vector[ReducerPackage] = Vector[ReducerPackage]()
 ) {
 
 	def createAggregateIndexKey(reducer: Reducer): IndexKey = {

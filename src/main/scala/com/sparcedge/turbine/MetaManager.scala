@@ -61,9 +61,9 @@ class MetaManager(bladeManagerRepository: ActorRef) extends Actor with ActorLogg
         (bladeManagerRepository ? BladeManagerRangeRequest(collection)).mapTo[BladeManagerRangeResponse].flatMap { response =>
             Future.sequence {
                 response.managers.map { case (_, manager) =>
-                    (manager ? SegmentsRequest()).mapTo[SegmentsResponse].map(_.segments.toList)
+                    (manager ? SegmentsRequest()).mapTo[SegmentsResponse].map(_.segments.toVector)
                 }
-            }.map(_.toList.flatten.distinct)
+            }.map(_.toVector.flatten.distinct)
         }.onComplete {
             case Success(segments) =>
                 ctx.complete(HttpResponse(StatusCodes.OK, HttpEntity(toJsonArray(segments))))

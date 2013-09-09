@@ -7,6 +7,7 @@ import scala.collection.mutable
 import com.sparcedge.turbine.util.WrappedTreeMap
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.query._
+import com.sparcedge.turbine.query.pipeline._
 import com.sparcedge.turbine.{Blade}
 import QueryUtil._
 
@@ -18,9 +19,11 @@ object AggregateIndex {
 	case class PopulatedIndex(index: Index)
 }
 
+import DataTypes._
 import AggregateIndex._
 import DataPartitionManager._
 
+// TODO: Rename to IndexManager
 class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with ActorLogging with Stash {
 
 	var cnt = 0
@@ -52,10 +55,26 @@ class AggregateIndex(indexKey: IndexKey, blade: Blade) extends Actor with ActorL
 	}
 }
 
+// TODO: Make sure can extend/match/group/reduce from single event!
 class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade) {
 	val index = new WrappedTreeMap[String,ReducedResult]()
 	val groupings = indexKey.groupings
 	val extenders = indexKey.extenders
+	var segmentPlaceholder = SegmentValueHolder(indexKey.reducer.segment)
+	val indexGrouping = IndexGrouping("hour", blade.periodStartMS)
+
+	def apply(placeholder: SegmentValueHolder) {
+		if(placeholder.segment == indexKey.reducer.segment) {
+			segmentPlaceholder = placeholder
+		}
+	}
+
+	def evaluate(grpStr: String) = (segmentPlaceholder.getType) match {
+        case NUMBER => updateUnchecked(segmentPlaceholder.getDouble, grpStr)
+        case STRING => updateUnchecked(segmentPlaceholder.getString, grpStr)
+        case TIMESTAMP => updateUnchecked(segmentPlaceholder.getTimestamp, grpStr)
+        case _ =>
+    }
 
 	def update(event: Event) {
 		val extEvent = if (extenders.size > 0) extendEvent(event, extenders) else event
@@ -66,7 +85,7 @@ class Index(val indexKey: IndexKey, val indexManager: ActorRef, val blade: Blade
 	}
 
 	def updateUnchecked(event: Event) {
-		val grpStr = createDataGroupString(event, blade, groupings)
+		val grpStr = createGroupString(event, indexGrouping +: groupings)
 		val reducer = getOrUpdate(grpStr)
 		reducer(event)
 	}

@@ -1,10 +1,24 @@
 package com.sparcedge.turbine.query
 
 import com.sparcedge.turbine.event.Event
+import com.sparcedge.turbine.data.{SegmentValueHolder,DataTypes}
 
-abstract class ReducedResult {
-	val segment: String
+abstract class ReducedResult(val segment: String) {
 	val reduceType: String
+	var segmentPlaceholder = SegmentValueHolder(segment)
+
+	def execute() = (segmentPlaceholder.getType) match {
+        case DataTypes.NUMBER => reduce(segmentPlaceholder.getDouble)
+        case DataTypes.STRING => reduce(segmentPlaceholder.getString)
+        case DataTypes.TIMESTAMP => reduce(segmentPlaceholder.getTimestamp.toDouble)
+        case _ => // Do Nothing
+    }
+
+	def apply(placeholder: SegmentValueHolder) {
+		if(placeholder.segment == segment) {
+			segmentPlaceholder = placeholder
+		}
+	}
 
 	def apply(event: Event) {
 		val dblOpt = event.getDouble(segment)
@@ -30,6 +44,9 @@ abstract class ReducedResult {
 	def copyForOutput(out: String): OutputResult
 
 	def reduce(newVal: Double)
+
+	def reduce(newVal: String) { /* Do Nothing By Default */ }
+
 	def reReduce(other: ReducedResult)
 }
 
@@ -37,7 +54,7 @@ trait OutputResult extends ReducedResult {
 	val output: String
 }
 
-class MaxReducedResult(val segment: String, var maximum: Double = 0.0, var initialized: Boolean = false) extends ReducedResult {
+class MaxReducedResult(seg: String, var maximum: Double = 0.0, var initialized: Boolean = false) extends ReducedResult(seg) {
 	val reduceType = "max"
 
 	def reduce(newVal: Double) {
@@ -69,7 +86,7 @@ class MaxReducedResult(val segment: String, var maximum: Double = 0.0, var initi
 	}
 }
 
-class MinReducedResult(val segment: String, var minimum: Double = 0.0, var initialized: Boolean = false) extends ReducedResult {
+class MinReducedResult(seg: String, var minimum: Double = 0.0, var initialized: Boolean = false) extends ReducedResult(seg) {
 	val reduceType = "min"
 
 	def reduce(newVal: Double) {
@@ -101,7 +118,7 @@ class MinReducedResult(val segment: String, var minimum: Double = 0.0, var initi
 	}
 }
 
-class AvgReducedResult(val segment: String, var sum: Double = 0.0, var count: Int = 0) extends ReducedResult {
+class AvgReducedResult(seg: String, var sum: Double = 0.0, var count: Int = 0) extends ReducedResult(seg) {
 	val reduceType = "avg"
 
 	def reduce(newVal: Double) {
@@ -128,7 +145,7 @@ class AvgReducedResult(val segment: String, var sum: Double = 0.0, var count: In
 	}
 }
 
-class SumReducedResult(val segment: String, var sum: Double = 0.0) extends ReducedResult {
+class SumReducedResult(seg: String, var sum: Double = 0.0) extends ReducedResult(seg) {
 	val reduceType = "sum"
 
 	def reduce(newVal: Double) {
@@ -151,7 +168,7 @@ class SumReducedResult(val segment: String, var sum: Double = 0.0) extends Reduc
 	def getResultValue(): Double = sum
 }
 
-class CountReducedResult(val segment: String, var count: Int = 0) extends ReducedResult {
+class CountReducedResult(seg: String, var count: Int = 0) extends ReducedResult(seg) {
 	val reduceType = "count"
 
 	override def apply(event: Event) {
@@ -185,7 +202,7 @@ class CountReducedResult(val segment: String, var count: Int = 0) extends Reduce
 	}
 }
 
-class StDevReducedResult(val segment: String, var diff: Double = 0.0, var mean: Double = 0.0, var count: Int = 0) extends ReducedResult {
+class StDevReducedResult(seg: String, var diff: Double = 0.0, var mean: Double = 0.0, var count: Int = 0) extends ReducedResult(seg) {
 	val reduceType = "stdev"
 
 	def reduce(newVal: Double) {

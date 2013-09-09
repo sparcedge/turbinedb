@@ -23,7 +23,7 @@ object Main extends App {
 		config = ConfigFactory.parseFile(configFile).withFallback(defaultConfig)
 	) yield config
 
-	val appConfig = userConfig.getOrElse(defaultConfig)
+	val appConfig = userConfig.getOrElse(defaultConfig).resolve()
 
 	implicit val actorSystem = ActorSystem("TurbineActorSystem", appConfig)
 	val printTimings = appConfig.getBoolean("com.sparcedge.turbinedb.print-timings")
@@ -31,9 +31,9 @@ object Main extends App {
 	val indexResolution = appConfig.getString("com.sparcedge.turbinedb.data.index-resolution")
 	val logger = Logging(actorSystem, "Turbine-Main");
 
+	// TODO: Set Cache Resolution
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
-	QueryUtil.DATA_GROUPING = new IndexGrouping(indexResolution)
 	logger.info("Using DataDirectory: {}", dataDirectory)
 
 	val turbineManager = actorSystem.actorOf(Props(new TurbineManager with TurbineManagerProvider), name = "TurbineManager")

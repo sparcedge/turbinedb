@@ -101,12 +101,13 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		val monthStart = indexVal.blade.periodStart.getMillis
 		val lowerBoundBroken = query.start != None && query.start.get > monthStart
 		var upperBoundBroken = query.end != None && query.end.get < indexVal.blade.periodEnd.getMillis
+		var iGrouping = IndexGrouping("hour", monthStart)
 
 		if(lowerBoundBroken) {
-			sliced = sliced.tailMap(DATA_GROUPING(query.start.get, monthStart))
+			sliced = sliced.tailMap(iGrouping.evaluate(query.start.get))
 		}
 		if(upperBoundBroken) {
-			sliced = sliced.headMap(DATA_GROUPING(query.end.get, monthStart))
+			sliced = sliced.headMap(iGrouping.evaluate(query.end.get))
 		}
 
 		sliced
