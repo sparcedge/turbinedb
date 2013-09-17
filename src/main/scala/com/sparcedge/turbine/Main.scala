@@ -29,9 +29,10 @@ object Main extends App {
 	val printTimings = appConfig.getBoolean("com.sparcedge.turbinedb.print-timings")
 	val dataDirectory = appConfig.getString("com.sparcedge.turbinedb.data.directory")
 	val indexResolution = appConfig.getString("com.sparcedge.turbinedb.data.index-resolution")
+	val httpInterface = appConfig.getString("com.sparcedge.turbinedb.http-interface")
+	val serverPort = appConfig.getInt("com.sparcedge.turbinedb.port")
 	val logger = Logging(actorSystem, "Turbine-Main");
 
-	// TODO: Set Cache Resolution
 	Timer.printTimings = printTimings
 	DiskUtil.BASE_PATH = dataDirectory
 	logger.info("Using DataDirectory: {}", dataDirectory)
@@ -40,6 +41,6 @@ object Main extends App {
 	logger.info("Created Turbine Manager")
 
 	val handler = actorSystem.actorOf(Props(new TurbineHttpServiceActor(turbineManager)).withDispatcher("com.sparcedge.turbinedb.http-dispatcher"))
-	IO(Http) ! Http.Bind(handler, interface = "0.0.0.0", port = 8080) // TODO: Put port in config file
+	IO(Http) ! Http.Bind(handler, interface = httpInterface, port = serverPort)
 	logger.info("Started Turbine Http Server")
 }
