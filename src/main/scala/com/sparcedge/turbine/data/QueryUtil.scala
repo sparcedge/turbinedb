@@ -33,7 +33,7 @@ object QueryUtil {
 			}
 			builder.toString
 		} else {
-			""
+			builder.toString
 		}
 	}
 
