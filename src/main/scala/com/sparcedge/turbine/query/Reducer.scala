@@ -25,6 +25,7 @@ object ReducerPackage {
 					case "sum" => new SumReducer(segment)
 					case "count" => new CountReducer(segment)
 					case "stdev" => new StDevReducer(segment)
+					case "range" => new RangeReducer(segment)
 					case _ => throw new Exception(s"Invalid Reducer Type: ${reduceType}")
 				}
 				ReducerPackage(propertyName, reducer)
@@ -72,4 +73,9 @@ case class CountReducer(segment: String) extends Reducer {
 case class StDevReducer(segment: String) extends Reducer {
 	val reduceType = "stdev"
 	def createReducedResult(): ReducedResult = new StDevReducedResult(segment)	
+}
+
+case class RangeReducer(segment: String) extends Reducer {
+	val reduceType = "range"
+	def createReducedResult(): ReducedResult = new RangeReducedResult(segment)
 }

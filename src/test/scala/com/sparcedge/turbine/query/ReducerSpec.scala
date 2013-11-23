@@ -229,3 +229,39 @@ class StDevReducerSpec extends WordSpec {
 			}
 	}
 }
+
+class RangeReducerSpec extends WordSpec {
+	val rangeReducer = RangeReducer("test")
+	"A RangeReducedResult" when {
+		"empty" should {
+			"have a value of 0" in {
+				val emptyResult = rangeReducer.createReducedResult()
+				assert(emptyResult.getResultValue == 0.0)
+			}
+			"reReduce with another empty result and still have a value of 0" in {
+				val emptyRes1 = rangeReducer.createReducedResult()
+				val emptyRes2 = rangeReducer.createReducedResult()
+				emptyRes1.reReduce(emptyRes2)
+				assert(emptyRes1.getResultValue == 0.0)
+			}
+		}
+		"supplied with values" should {
+			"calculate the correct range" in {
+				val result = rangeReducer.createReducedResult()
+				val nums = List[Double](1,2,3,4,5,6,7,8,9,10)
+				nums.foreach(result(_))
+				assert(result.getResultValue == (nums.max - nums.min))
+			}
+		}
+		"produce the correct value after reReducing" in {
+				val result1 = rangeReducer.createReducedResult()
+				val result2 = rangeReducer.createReducedResult()
+				val nums1 = List[Double](1,2,3,4,5)
+				val nums2 = List[Double](6,7,8,9,10)
+				nums1.foreach(result1(_))
+				nums2.foreach(result2(_))
+				result1.reReduce(result2)
+				assert(result1.getResultValue == ((nums1 ++ nums2).max) - ((nums1 ++ nums2).min))
+			}
+	}
+}

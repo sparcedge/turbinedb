@@ -235,3 +235,46 @@ class StDevReducedResult(seg: String, var diff: Double = 0.0, var mean: Double =
 		if(count > 0) Math.sqrt(diff / count) else 0
 	}
 }
+
+class RangeReducedResult(seg: String, var maximum: Double = 0.0, var minimum: Double = 0.0, var initialized: Boolean = false) extends ReducedResult(seg) {
+	val reduceType = "range"
+
+	def reduce(newVal: Double) {
+		if(!initialized) {
+			maximum = newVal
+			minimum = newVal
+			initialized = true
+		} else if(newVal > maximum) {
+			maximum = newVal
+		} else if(newVal < minimum) {
+			minimum = newVal
+		}
+	}
+
+	def reReduce(other: ReducedResult) {
+		if(other.isInstanceOf[RangeReducedResult]) {
+			val rngResult = other.asInstanceOf[RangeReducedResult]
+			if(!initialized) {
+				maximum = rngResult.maximum
+				minimum = rngResult.minimum
+				initialized = rngResult.initialized
+			} else if(rngResult.initialized && rngResult.maximum > maximum) {
+				maximum = rngResult.maximum
+				initialized = true
+			} else if(rngResult.initialized && rngResult.minimum < minimum) {
+				minimum = rngResult.minimum
+				initialized = true
+			}
+		}
+	}
+
+	def getResultValue(): Double = {
+		maximum - minimum
+	}
+
+	def copyForOutput(out: String): OutputResult = {
+		new RangeReducedResult(segment, maximum, minimum) with OutputResult {
+			val output = out
+		}
+	}
+}
