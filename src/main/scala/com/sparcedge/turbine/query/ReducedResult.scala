@@ -278,3 +278,37 @@ class RangeReducedResult(seg: String, var maximum: Double = 0.0, var minimum: Do
 		}
 	}
 }
+
+class VarianceReducedResult(seg: String, var diff: Double = 0.0, var mean: Double = 0.0, var count: Int = 0) extends ReducedResult(seg) {
+	val reduceType = "variance"
+
+	def reduce(newVal: Double) {
+		count += 1
+		val delta = newVal - mean
+		mean = mean + (delta / count)
+		diff += delta * (newVal - mean)
+	}
+
+	// TODO: Encode Type Restrictions in trait/inheritance hierarchy
+	def reReduce(other: ReducedResult) {
+		if(other.isInstanceOf[VarianceReducedResult]) {
+			val variance = other.asInstanceOf[VarianceReducedResult]
+			val tmpCnt = count
+			val delta = mean - variance.mean
+			val weight = (count * variance.count).toDouble / (count + variance.count)
+			diff += variance.diff + (delta*delta*weight)
+			count += variance.count
+			mean = ((mean*tmpCnt) + (variance.mean*variance.count)) / count
+		}
+	}
+
+	def copyForOutput(out: String): OutputResult = {
+		new VarianceReducedResult(segment, diff, mean, count) with OutputResult {
+			val output = out
+		}
+	}
+
+	def getResultValue(): Double = {
+		if(count > 0) diff / count else 0
+	}
+}

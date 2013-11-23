@@ -265,3 +265,39 @@ class RangeReducerSpec extends WordSpec {
 			}
 	}
 }
+
+class VarianceReducerSpec extends WordSpec {
+	val varReducer = VarianceReducer("test")
+	"A VarianceReducedResult" when {
+		"empty" should {
+			"have a value of 0" in {
+				val emptyResult = varReducer.createReducedResult()
+				assert(emptyResult.getResultValue == 0.0)
+			}
+			"reReduce with another empty result and still have a value of 0" in {
+				val emptyRes1 = varReducer.createReducedResult()
+				val emptyRes2 = varReducer.createReducedResult()
+				emptyRes1.reReduce(emptyRes2)
+				assert(emptyRes1.getResultValue == 0.0)
+			}
+		}
+		"supplied with values" should {
+			"calculate the correct variance" in {
+				val result = varReducer.createReducedResult()
+				val nums = List[Double](1,2,3,4,5,6,7,8,9,10)
+				nums.foreach(result(_))
+				// TODO: Implement
+			}
+		}
+		"produce the correct value after reReducing" in {
+				val result1 = varReducer.createReducedResult()
+				val result2 = varReducer.createReducedResult()
+				val nums1 = List[Double](1,2,3,4,5)
+				val nums2 = List[Double](6,7,8,9,10)
+				nums1.foreach(result1(_))
+				nums2.foreach(result2(_))
+				result1.reReduce(result2)
+				// TODO: Implement
+			}
+	}
+}
