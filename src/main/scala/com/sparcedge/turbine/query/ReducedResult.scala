@@ -202,37 +202,17 @@ class CountReducedResult(seg: String, var count: Int = 0) extends ReducedResult(
 	}
 }
 
-class StDevReducedResult(seg: String, var diff: Double = 0.0, var mean: Double = 0.0, var count: Int = 0) extends ReducedResult(seg) {
-	val reduceType = "stdev"
+class StDevReducedResult(seg: String, diff: Double = 0.0, mean: Double = 0.0, count: Int = 0) extends VarianceReducedResult(seg, diff, mean, count) {
+ 	override val reduceType = "stdev"
 
-	def reduce(newVal: Double) {
-		count += 1
-		val delta = newVal - mean
-		mean = mean + (delta / count)
-		diff += delta * (newVal - mean)
-	}
-
-	// TODO: Encode Type Restrictions in trait/inheritance hierarchy
-	def reReduce(other: ReducedResult) {
-		if(other.isInstanceOf[StDevReducedResult]) {
-			val stDev = other.asInstanceOf[StDevReducedResult]
-			val tmpCnt = count
-			val delta = mean - stDev.mean
-			val weight = (count * stDev.count).toDouble / (count + stDev.count)
-			diff += stDev.diff + (delta*delta*weight)
-			count += stDev.count
-			mean = ((mean*tmpCnt) + (stDev.mean*stDev.count)) / count
-		}
-	}
-
-	def copyForOutput(out: String): OutputResult = {
+	override def copyForOutput(out: String): OutputResult = {
 		new StDevReducedResult(segment, diff, mean, count) with OutputResult {
 			val output = out
 		}
 	}
 
-	def getResultValue(): Double = {
-		if(count > 0) Math.sqrt(diff / count) else 0
+	override def getResultValue(): Double = {
+		Math.sqrt(super.getResultValue())
 	}
 }
 
