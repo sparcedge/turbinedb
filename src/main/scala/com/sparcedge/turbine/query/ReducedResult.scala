@@ -135,7 +135,7 @@ class AvgReducedResult(seg: String, var sum: Double = 0.0, var count: Int = 0) e
 	}
 
 	def getResultValue(): Double = {
-		if(sum > 0) sum / count else 0
+		if(count <= 0) 0 else sum / count
 	}
 
 	def copyForOutput(out: String): OutputResult = {
