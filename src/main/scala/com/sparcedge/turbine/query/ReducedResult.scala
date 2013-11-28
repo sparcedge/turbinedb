@@ -145,6 +145,37 @@ class AvgReducedResult(seg: String, var sum: Double = 0.0, var count: Int = 0) e
 	}
 }
 
+class HarmonicMeanReducedResult(seg: String, var sum: Double = 0.0, var count: Int = 0) extends ReducedResult(seg) {
+	val reduceType = "harmonicmean"
+
+	def reduce(newVal: Double) {
+		if(newVal > 0) {
+			sum += 1 / newVal
+			count += 1
+		}
+	}
+
+	def reReduce(other: ReducedResult) {
+		if(other.isInstanceOf[HarmonicMeanReducedResult]) {
+			val avgResult = other.asInstanceOf[HarmonicMeanReducedResult]
+			if(avgResult.sum > 0) {
+				sum += 1 / avgResult.sum
+				count += avgResult.count
+			}
+		}
+	}
+
+	def getResultValue(): Double = {
+		if(sum == 0) 0 else count / sum
+	}
+
+	def copyForOutput(out: String): OutputResult = {
+		new HarmonicMeanReducedResult(segment, sum, count) with OutputResult {
+			val output = out
+		}
+	}
+}
+
 class SumReducedResult(seg: String, var sum: Double = 0.0) extends ReducedResult(seg) {
 	val reduceType = "sum"
 
@@ -199,20 +230,6 @@ class CountReducedResult(seg: String, var count: Int = 0) extends ReducedResult(
 		new CountReducedResult(segment, count) with OutputResult {
 			val output = out
 		}
-	}
-}
-
-class StDevReducedResult(seg: String, diff: Double = 0.0, mean: Double = 0.0, count: Int = 0) extends VarianceReducedResult(seg, diff, mean, count) {
- 	override val reduceType = "stdev"
-
-	override def copyForOutput(out: String): OutputResult = {
-		new StDevReducedResult(segment, diff, mean, count) with OutputResult {
-			val output = out
-		}
-	}
-
-	override def getResultValue(): Double = {
-		Math.sqrt(super.getResultValue())
 	}
 }
 
@@ -290,5 +307,19 @@ class VarianceReducedResult(seg: String, var diff: Double = 0.0, var mean: Doubl
 
 	def getResultValue(): Double = {
 		if(count > 0) diff / count else 0
+	}
+}
+
+class StDevReducedResult(seg: String, diff: Double = 0.0, mean: Double = 0.0, count: Int = 0) extends VarianceReducedResult(seg, diff, mean, count) {
+ 	override val reduceType = "stdev"
+
+	override def copyForOutput(out: String): OutputResult = {
+		new StDevReducedResult(segment, diff, mean, count) with OutputResult {
+			val output = out
+		}
+	}
+
+	override def getResultValue(): Double = {
+		Math.sqrt(super.getResultValue())
 	}
 }

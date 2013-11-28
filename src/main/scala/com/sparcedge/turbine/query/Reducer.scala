@@ -21,8 +21,9 @@ object ReducerPackage {
 				val reducer = reduceType match {
 					case "max" => new MaxReducer(segment)
 					case "min" => new MinReducer(segment)
-					case "avg" => new AvgReducer(segment)
 					case "sum" => new SumReducer(segment)
+					case "avg" => new AvgReducer(segment)
+					case "harmonicmean" => new HarmonicMeanReducer(segment)
 					case "count" => new CountReducer(segment)
 					case "stdev" => new StDevReducer(segment)
 					case "range" => new RangeReducer(segment)
@@ -71,11 +72,6 @@ case class CountReducer(segment: String) extends Reducer {
 	def createReducedResult(): ReducedResult = new CountReducedResult(segment)	
 }
 
-case class StDevReducer(segment: String) extends Reducer {
-	val reduceType = "stdev"
-	def createReducedResult(): ReducedResult = new StDevReducedResult(segment)	
-}
-
 case class RangeReducer(segment: String) extends Reducer {
 	val reduceType = "range"
 	def createReducedResult(): ReducedResult = new RangeReducedResult(segment)
@@ -84,4 +80,14 @@ case class RangeReducer(segment: String) extends Reducer {
 case class VarianceReducer(segment: String) extends Reducer {
 	val reduceType = "variance"
 	def createReducedResult(): ReducedResult = new VarianceReducedResult(segment)	
+}
+
+case class StDevReducer(segment: String) extends Reducer {
+	val reduceType = "stdev"
+	def createReducedResult(): ReducedResult = new StDevReducedResult(segment)	
+}
+
+case class HarmonicMeanReducer(segment: String) extends Reducer {
+	val reduceType = "harmonicmean"
+	def createReducedResult(): ReducedResult = new HarmonicMeanReducedResult(segment)
 }
