@@ -310,16 +310,36 @@ class VarianceReducedResult(seg: String, var diff: Double = 0.0, var mean: Doubl
 	}
 }
 
-class StDevReducedResult(seg: String, diff: Double = 0.0, mean: Double = 0.0, count: Int = 0) extends VarianceReducedResult(seg, diff, mean, count) {
+class StDevReducedResult(seg: String, var diff: Double = 0.0, var mean: Double = 0.0, var count: Int = 0) extends ReducedResult(seg) {
  	override val reduceType = "stdev"
 
-	override def copyForOutput(out: String): OutputResult = {
+	def reduce(newVal: Double) {
+		count += 1
+		val delta = newVal - mean
+		mean = mean + (delta / count)
+		diff += delta * (newVal - mean)
+	}
+
+	// TODO: Encode Type Restrictions in trait/inheritance hierarchy
+	def reReduce(other: ReducedResult) {
+		if(other.isInstanceOf[StDevReducedResult]) {
+			val variance = other.asInstanceOf[StDevReducedResult]
+			val tmpCnt = count
+			val delta = mean - variance.mean
+			val weight = (count * variance.count).toDouble / (count + variance.count)
+			diff += variance.diff + (delta*delta*weight)
+			count += variance.count
+			mean = ((mean*tmpCnt) + (variance.mean*variance.count)) / count
+		}
+	}
+
+	def copyForOutput(out: String): OutputResult = {
 		new StDevReducedResult(segment, diff, mean, count) with OutputResult {
 			val output = out
 		}
 	}
 
-	override def getResultValue(): Double = {
-		Math.sqrt(super.getResultValue())
+	def getResultValue(): Double = {
+		if(count > 0) Math.sqrt(diff / count) else 0
 	}
 }
