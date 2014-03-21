@@ -42,10 +42,10 @@ class JournalWriter(journal: Journal) extends Actor with BatchBehavior with Acto
 	def writeEventPackagesToJournal(eventPkgs: Iterable[EventIngressPackage], ctx: RequestContext) {
 		eventPkgs foreach { pkg =>
 			val serialized = EventIngressPackage.toBytes(pkg)
-			journal.write(serialized, WriteType.ASYNC)
-			incrementBatchSize()
+			journal.write(serialized, WriteType.ASYNC)			
 		}
 		unacknowledgedContexts += ctx
+		eventPkgs.foreach(_ => incrementBatchSize())
 	}
 
 	def writeEventPackageToJournal(eventPkg: EventIngressPackage, ctx: RequestContext) {

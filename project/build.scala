@@ -1,12 +1,11 @@
 import sbt._
 import Keys._
 import com.github.retronym.SbtOneJar
-import com.typesafe.sbt.SbtAtmos.{ Atmos, atmosSettings }
 
 object BuildSettings {
 	val buildOrganization = "com.sparcedge"
 	val buildVersion      = "0.1"
-	val buildScalaVersion = "2.10.2"
+	val buildScalaVersion = "2.10.3"
 
 	val buildSettings = Defaults.defaultSettings ++ Seq (
 		organization := buildOrganization,
@@ -18,14 +17,11 @@ object BuildSettings {
 object Resolvers {
 	val typesafeRepo = "Typesafe Repo" at "http://repo.typesafe.com/typesafe/releases/"
 	val sprayRepo = "Spray Repo" at "http://repo.spray.io"
-	val sprayNightlyRepo = "Spray Nightly Repo" at "http://nightlies.spray.io/"
-	val playJsonSnapRepo = "Mandubian repository snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/"
-	val playJsonRelRepo = "Mandubian repository releases" at "https://github.com/mandubian/mandubian-mvn/raw/master/releases/"
 }
 
 object Dependencies {
-	val akkaVersion = "2.2.1"
-	val sprayVersion = "1.2-20130822"
+	val akkaVersion = "2.3.0"
+	val sprayVersion = "1.3.1"
 
 	val akkaActor = "com.typesafe.akka" %% "akka-actor" % akkaVersion
 	val akkaRemote = "com.typesafe.akka" %% "akka-remote" % akkaVersion
@@ -36,13 +32,13 @@ object Dependencies {
 	val sprayCan = "io.spray" % "spray-can" % sprayVersion
 	val sprayRouting = "io.spray" % "spray-routing" % sprayVersion
 
-	val playJson = "play" %% "play-json" % "2.2-SNAPSHOT"
+	val playJson = "com.typesafe.play" %% "play-json" % "2.2.2"
 	val jodaTime = "joda-time" % "joda-time" % "2.1"
 	val jodaConvert = "org.joda" % "joda-convert" % "1.2"
 	val slf4j = "org.slf4j" % "slf4j-nop" % "1.6.4"
-	val journalio = "com.github.sbtourist" % "journalio" % "1.4"
+	val journalio = "com.github.sbtourist" % "journalio" % "1.4.2"
 
-	val scalatest = "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+	val scalatest = "org.scalatest" %% "scalatest" % "2.1.0" % "test"
 	val googleCaliper = "com.google.caliper" % "caliper" % "0.5-rc1"
 	val googleInstrumenter = "com.google.code.java-allocation-instrumenter" % "java-allocation-instrumenter" % "2.0"
 
@@ -64,16 +60,14 @@ object TurbineDB extends Build {
 		Project ("turbine-db", file("."))
 			.settings ( buildSettings : _* )
 			.settings ( SbtOneJar.oneJarSettings : _* )
-			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, sprayNightlyRepo, playJsonSnapRepo, playJsonRelRepo) )
+			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( scalacOptions ++= Seq("-unchecked", "-deprecation", "-feature") )
-			.configs(Atmos)
-  			.settings(atmosSettings: _*)
 
 	lazy val turbineBenchmark = 
 		Project ("benchmark", file("benchmark"))
 			.settings ( buildSettings : _* )
-			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo, sprayNightlyRepo, playJsonSnapRepo) )
+			.settings ( resolvers ++= Seq(typesafeRepo, sprayRepo) )
 			.settings ( libraryDependencies ++= Dependencies.allDependencies )
 			.settings ( libraryDependencies ++= Dependencies.benchmarkDependencies )
 			.settings ( fork in run := true )
