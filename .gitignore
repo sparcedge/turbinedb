@@ -8,3 +8,4 @@ project/boot/
 .classpath
 .idea/
 .idea_modules/
+.settings/
