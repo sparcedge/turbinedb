@@ -2,7 +2,7 @@ package com.sparcedge.turbine.data
 
 import akka.actor.{Actor,ActorRef,ActorLogging}
 import scala.util.{Try,Success,Failure}
-import scala.concurrent.{future,ExecutionContext}
+import scala.concurrent.{ExecutionContext,Future}
 
 import com.sparcedge.turbine.event.Event
 import com.sparcedge.turbine.query.{Match,Grouping}
@@ -33,7 +33,7 @@ class DataPartitionManager(blade: Blade) extends Actor with ActorLogging with Ba
 		case WriteEvent(id, event) =>
 			addToBatch((id,event))			
 		case PopulateIndexesRequest(indexes) =>
-			val f = future { partition.populateIndexes(indexes) }
+			val f = Future { partition.populateIndexes(indexes) }
 			f onComplete {
 				case Success(un) => 
 					indexes.foreach(index => index.indexManager ! PopulatedIndex(index))

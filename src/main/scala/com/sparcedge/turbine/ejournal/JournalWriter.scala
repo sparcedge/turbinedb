@@ -2,10 +2,11 @@ package com.sparcedge.turbine.ejournal
 
 import scala.collection.mutable
 import akka.actor.{Actor,ActorRef,Props,ActorLogging}
-import akka.routing.RoundRobinRouter
+import akka.routing.RoundRobinPool
 import journal.io.api.{Journal,Location}
 import Journal.WriteType
 import spray.routing.RequestContext
+import spray.httpx.marshalling.BasicMarshallers
 
 import com.sparcedge.turbine.event.{EventPackage,EventIngressPackage}
 import com.sparcedge.turbine.behaviors.BatchBehavior
@@ -20,12 +21,10 @@ import HttpResponder._
 
 class JournalWriter(journal: Journal) extends Actor with BatchBehavior with ActorLogging {
 
-	val responder = context.actorOf (
-		Props[HttpResponder].
-			withRouter(RoundRobinRouter(50)).
-			withDispatcher("com.sparcedge.turbinedb.http-dispatcher"),
-		"HttpResponderRouter"
-	)
+  val responder = context.actorOf (
+  	RoundRobinPool(50).props(Props[HttpResponder]).withDispatcher("com.sparcedge.turbinedb.http-dispatcher"),
+  	"HttpResponderRouter"
+  )
 
 	val maxBatchSize = context.system.settings.config.getInt("com.sparcedge.turbinedb.journal.max-unsynced-events")
 	val maxTimeUnflushed = context.system.settings.config.getInt("com.sparcedge.turbinedb.journal.max-time-unsynced")
@@ -72,7 +71,7 @@ object HttpResponder {
 	case class RespondMultiple(ctxs: Iterable[RequestContext], resp: String)
 }
 
-class HttpResponder extends Actor {
+class HttpResponder extends Actor with BasicMarshallers {
 	def receive = {
 		case Respond(ctx, resp) =>
 			ctx.complete(resp)

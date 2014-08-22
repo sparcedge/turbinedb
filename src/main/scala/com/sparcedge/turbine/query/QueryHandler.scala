@@ -4,7 +4,7 @@ import java.io.{StringWriter,PrintWriter}
 import akka.actor.{Actor,ActorRef}
 import akka.util.Timeout
 import akka.pattern.ask
-import scala.concurrent.{ExecutionContext,Await,Future,future}
+import scala.concurrent.{ExecutionContext,Await,Future}
 import scala.concurrent.duration._
 import scala.util.{Try,Success,Failure}
 import scala.collection.mutable
@@ -45,8 +45,8 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 				bladeManagers <- getBladeManagers(queryPackage);
 				indexManagers <- getIndexManagers(bladeManagers, query);
 				indexes <- getIndexes(indexManagers);
-				combinedIndex <- future { sliceFlattenAndCombineIndexes(indexes, query, outMap) };
-				json <- future { convertCombinedIndexToJson(combinedIndex) }
+				combinedIndex <- Future { sliceFlattenAndCombineIndexes(indexes, query, outMap) };
+				json <- Future { convertCombinedIndexToJson(combinedIndex) }
 			) yield json
 
 			jsonResult.onComplete {

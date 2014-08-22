@@ -11,6 +11,7 @@ import HttpMethods._
 import HttpHeaders._
 import CacheDirectives._
 import MediaTypes._
+import spray.httpx.marshalling.BasicMarshallers
 
 import com.sparcedge.turbine.event.{IngressEvent,EventIngressPackage}
 import com.sparcedge.turbine.Collection
@@ -26,7 +27,7 @@ class TurbineHttpServiceActor(val turbineManager: ActorRef) extends Actor with T
 
 import StreamingNotifier._
 
-trait TurbineHttpService extends HttpService { this: ActorLogging =>
+trait TurbineHttpService extends HttpService with BasicMarshallers { this: ActorLogging =>
 	val turbineManager: ActorRef
 	val streamingNotifier: ActorRef
 
