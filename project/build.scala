@@ -29,8 +29,8 @@ object Dependencies {
 	val akkaTestkit = "com.typesafe.akka" %% "akka-testkit" % akkaVersion
 	val akkaCluster = "com.typesafe.akka" %% "akka-cluster" % akkaVersion
 
-	val sprayCan = "io.spray" % "spray-can" % sprayVersion
-	val sprayRouting = "io.spray" % "spray-routing" % sprayVersion
+	val sprayCan = "io.spray" %% "spray-can" % sprayVersion
+	val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
 
 	val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.0.2"
 	val playJson = "com.typesafe.play" %% "play-json" % "2.3.1"
