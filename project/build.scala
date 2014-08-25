@@ -32,6 +32,7 @@ object Dependencies {
 	val sprayCan = "io.spray" %% "spray-can" % sprayVersion
 	val sprayRouting = "io.spray" %% "spray-routing" % sprayVersion
 
+	val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
 	val scalaXml = "org.scala-lang.modules" %% "scala-xml" % "1.0.2"
 	val playJson = "com.typesafe.play" %% "play-json" % "2.3.1"
 	val jodaTime = "joda-time" % "joda-time" % "2.1"
@@ -45,7 +46,7 @@ object Dependencies {
 
 	val akkaDependencies = Seq(akkaActor, akkaRemote, akkaSlf4j, akkaTestkit, akkaCluster)
 	val sprayDependencies = Seq(sprayCan, sprayRouting)
-	val miscDependencies = Seq(scalaXml, jodaTime, jodaConvert, slf4j, journalio, playJson)
+	val miscDependencies = Seq(scalaAsync, scalaXml, jodaTime, jodaConvert, slf4j, journalio, playJson)
 	val testDependencies = Seq(scalatest)
 	val allDependencies = akkaDependencies ++ sprayDependencies ++ miscDependencies ++ testDependencies
 

@@ -1,13 +1,13 @@
 package com.sparcedge.turbine.query
 
-import java.io.{StringWriter,PrintWriter}
+import scala.concurrent.{ExecutionContext,Await,Future}
+import scala.concurrent.duration._
+import scala.util.{Success,Failure}
+import scala.async.Async.{async, await}
+
 import akka.actor.{Actor,ActorRef}
 import akka.util.Timeout
 import akka.pattern.ask
-import scala.concurrent.{ExecutionContext,Await,Future}
-import scala.concurrent.duration._
-import scala.util.{Try,Success,Failure}
-import scala.collection.mutable
 import spray.routing.RequestContext
 import spray.http.{HttpResponse,HttpEntity,StatusCodes}
 import org.joda.time.format.DateTimeFormat
@@ -35,28 +35,27 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 	var outCount = 0
 
 	def receive = {
-		case HandleQuery(queryPackage, ctx) =>
-			val query = queryPackage.query
-
-			val outMap = query.reducers.map(r => (r.reducer -> r.outputProperty)).toMap
-
-			// In the future!!!
-			val jsonResult = for (
-				bladeManagers <- getBladeManagers(queryPackage);
-				indexManagers <- getIndexManagers(bladeManagers, query);
-				indexes <- getIndexes(indexManagers);
-				combinedIndex <- Future { sliceFlattenAndCombineIndexes(indexes, query, outMap) };
-				json <- Future { convertCombinedIndexToJson(combinedIndex) }
-			) yield json
-
-			jsonResult.onComplete {
-				case Success(json) => 
-					ctx.complete(HttpResponse(StatusCodes.OK, HttpEntity(json)))
-				case Failure(err) => 
-					err.printStackTrace()
-					ctx.complete(HttpResponse(StatusCodes.InternalServerError))
-			}
+		case HandleQuery(queryPackage, ctx) => handleQuery(queryPackage, ctx)
 		case _ =>
+	}
+
+	def handleQuery(queryPackage: TurbineQueryPackage, ctx: RequestContext) {
+		val query = queryPackage.query
+		val outMap = query.reducers.map(r => (r.reducer -> r.outputProperty)).toMap
+
+		async {
+			val bladeManagers = await(getBladeManagers(queryPackage))
+			val indexManagers = await(getIndexManagers(bladeManagers, query))
+			val indexes = await(getIndexes(indexManagers))
+			val combinedIndex = sliceFlattenAndCombineIndexes(indexes, query, outMap)
+			convertCombinedIndexToJson(combinedIndex)
+		} onComplete {
+			case Success(json) => 
+				ctx.complete(HttpResponse(StatusCodes.OK, HttpEntity(json)))
+			case Failure(err) => 
+				err.printStackTrace()
+				ctx.complete(HttpResponse(StatusCodes.InternalServerError))
+		}
 	}
 
 	def getBladeManagers(queryPackage: TurbineQueryPackage): Future[Iterable[ActorRef]] = {
@@ -65,21 +64,26 @@ class QueryHandler(bladeManagerRepository: ActorRef) extends Actor {
 		val ePeriodOpt = query.end.map(monthFmt.print)
 		val req = BladeManagerRangeRequest(queryPackage.collection, sPeriodOpt, ePeriodOpt)
 
-		(bladeManagerRepository ? req).mapTo[BladeManagerRangeResponse].map(_.managers.map(_._2))
+		async {
+			val response = await((bladeManagerRepository ? req).mapTo[BladeManagerRangeResponse])
+			response.managers.map(_._2)
+		}
 	}
 
 	def getIndexManagers(bladeManagers: Iterable[ActorRef], query: TurbineQuery): Future[Iterable[ActorRef]] = {
-		val indexManagerResponses = Future.sequence (
-			bladeManagers map { manager => (manager ? IndexesRequest(query)).mapTo[IndexesResponse] }
-		)
-		indexManagerResponses.map(responses => responses.flatMap(_.indexes))
+		async {
+			val responseFutures = bladeManagers.map(_.ask(IndexesRequest(query)).mapTo[IndexesResponse])
+			val responses = await(Future.sequence(responseFutures))
+			responses.flatMap(_.indexes)
+		}
 	}
 
 	def getIndexes(indexManagers: Iterable[ActorRef]): Future[Iterable[Index]] = {
-		val indexResponses = Future.sequence (
-			indexManagers map { manager => (manager ? IndexRequest()).mapTo[IndexResponse] }
-		)
-		indexResponses.map(responses => responses.map(res => res.index))
+		async {
+			val responseFutures = indexManagers.map(_.ask(IndexRequest()).mapTo[IndexResponse])
+			val responses = await(Future.sequence(responseFutures))
+			responses.map(_.index)
+		}
 	}
 
 	def sliceFlattenAndCombineIndexes(indexes: Iterable[Index], query: TurbineQuery, outMap: Map[Reducer,String]): WrappedTreeMap[String,List[OutputResult]] = {
