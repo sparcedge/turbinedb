@@ -1,17 +1,16 @@
 
-Turbine DB
-=============
+# Turbine DB
 
-Scala code base for the turbine database, which is a low latency time series event driven, columnar database.
+Scala code base for the turbine database, which is a low latency, time-series, event driven, columnar database.
 
-Prerequisites
-------------
+## Prerequisites
+
 
 * [SBT](https://github.com/harrah/xsbt) -- [install instructions](http://www.scala-sbt.org/release/docs/Getting-Started/Setup)
 * [Scala IDE (Eclipse)](http://www.scala-ide.org/) -- [install](http://download.scala-ide.org/)
 
-Getting Started
-------------
+## Getting Started
+
 
 Download Project References
 	
@@ -41,8 +40,7 @@ Run Benchmarks (Google Caliper)
 
 	$ sbt benchmark/run
 
-Basic Use
----------
+## Basic Use
 
 ### Insert Event
 
@@ -84,3 +82,6 @@ Query needs to be URI encoded [eg: encodeURIComponent(query) in node/js console]
 	GET: http://localhost:8080/db/mydatabase/mycollection?m=<query>
 
 
+## License
+
+This project is Copyright (c) 2015 [SPARC](https://github.com/sparcedge/) and open sourced under the [GNU GPL v3.0](LICENSE.txt).
